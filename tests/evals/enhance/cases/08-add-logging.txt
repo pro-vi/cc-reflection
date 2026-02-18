@@ -1,0 +1,1 @@
+add debug logging to all shell scripts in lib/

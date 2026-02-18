@@ -1,0 +1,20 @@
+{
+  "name": "negative-typo-fix",
+  "description": "NEGATIVE TEST: Simple typo fix with no insight worth capturing",
+  "why_its_good": [
+    "Tests false positive suppression",
+    "Routine task with no discovery or learning",
+    "Model should output NO_SEEDS"
+  ],
+  "transcript_signals": {},
+  "expected_detection": {
+    "should_identify": "Nothing - this is a negative test",
+    "should_cite": "N/A",
+    "should_propose": "NO_SEEDS"
+  },
+  "eval_criteria": {
+    "recall": "Should NOT find any insight",
+    "precision": "Should output NO_SEEDS or equivalent",
+    "signal_detection": "Should recognize this is routine/trivial"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "negative-simple-question",
+  "description": "NEGATIVE TEST: Basic documentation question with no discovery",
+  "why_its_good": [
+    "Tests false positive suppression",
+    "Standard knowledge lookup, no insight",
+    "Model should output NO_SEEDS"
+  ],
+  "transcript_signals": {},
+  "expected_detection": {
+    "should_identify": "Nothing - this is a negative test",
+    "should_cite": "N/A",
+    "should_propose": "NO_SEEDS"
+  },
+  "eval_criteria": {
+    "recall": "Should NOT find any insight",
+    "precision": "Should output NO_SEEDS or equivalent",
+    "signal_detection": "Should recognize this is just documentation lookup"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "delimiter-mismatch-testing",
+  "description": "User reports feature broken, investigation reveals delimiter mismatch between components and missing test coverage",
+  "why_its_good": [
+    "Real debugging loop that succeeded through testing discipline",
+    "Non-obvious root cause: code worked in isolation, failed in integration",
+    "Tests passed because functions weren't tested (silent gap)",
+    "Clear action: 24 regression tests added as fix"
+  ],
+  "transcript_signals": {
+    "engineering": [
+      "Different delimiters in different code parts (pipe vs tab)",
+      "Logs showed success but user experience showed failure",
+      "Architecture assumption (shared contract) wasn't enforced"
+    ],
+    "meta": [
+      "Untested code works until it doesn't",
+      "Test coverage gaps are blind spots in design",
+      "Why it worked within tests reveals what tests don't cover"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "Architecture fragility from implicit contract (delimiter format)",
+    "should_cite": "Delimiter mismatch: pipe in scripts vs tab in menu",
+    "should_propose": "Add integration tests, enforce contracts explicitly"
+  },
+  "eval_criteria": {
+    "recall": "Must mention delimiter/contract mismatch and testing gap",
+    "precision": "Should not focus on the feature itself but the systemic issue",
+    "signal_detection": "Should catch the 'why it worked within tests' meta-insight"
+  }
+}

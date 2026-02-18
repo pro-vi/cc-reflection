@@ -1,0 +1,20 @@
+{
+  "name": "negative-routine-task",
+  "description": "NEGATIVE TEST: Routine install and test commands with no discovery",
+  "why_its_good": [
+    "Tests false positive suppression",
+    "Following instructions without any insight or discovery",
+    "Model should output NO_SEEDS"
+  ],
+  "transcript_signals": {},
+  "expected_detection": {
+    "should_identify": "Nothing - this is a negative test",
+    "should_cite": "N/A",
+    "should_propose": "NO_SEEDS"
+  },
+  "eval_criteria": {
+    "recall": "Should NOT find any insight",
+    "precision": "Should output NO_SEEDS or equivalent",
+    "signal_detection": "Should recognize this is routine task execution"
+  }
+}

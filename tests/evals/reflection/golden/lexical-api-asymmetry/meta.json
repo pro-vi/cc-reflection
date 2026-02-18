@@ -1,0 +1,32 @@
+{
+  "name": "lexical-api-asymmetry",
+  "description": "Lexical framework has hidden API asymmetry where read() returns values but update() returns void",
+  "why_its_good": [
+    "Non-obvious framework constraint that catches experienced developers",
+    "TypeScript surfaced the issue but didn't explain it",
+    "Pattern extends to other frameworks with mutation/query distinction",
+    "Documents practical constraint affecting code organization"
+  ],
+  "transcript_signals": {
+    "engineering": [
+      "editor.getEditorState().read(callback) returns callback value",
+      "editor.update(callback) returns void regardless of callback return",
+      "This affects refactoring patterns and code organization"
+    ],
+    "meta": [
+      "Mutation operations typically return void",
+      "Query operations return values for composition",
+      "API asymmetry is a design pattern worth documenting"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "API asymmetry between mutation and query operations",
+    "should_cite": "TypeScript error about void expression",
+    "should_propose": "Document this pattern for future Lexical work"
+  },
+  "eval_criteria": {
+    "recall": "Must mention update/read asymmetry or void return",
+    "precision": "Should recognize this as intentional API design, not a bug",
+    "signal_detection": "Should catch the mutation vs query pattern"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "ralph-loop-fidelity",
+  "description": "Process improvement: enhancing an existing skill with configurable quality gates and completion tracking. Tests expansion's ability to analyze real usage patterns and propose systematic improvements.",
+  "why_its_good": [
+    "Cites actual file paths with line numbers (PROGRESS_3_AGENT.md lines 39-45, 60, 372)",
+    "References real project evidence (1274 commits, 5 PROGRESS files)",
+    "Lists available skills for composition (7 skills with descriptions)",
+    "Provides before/after markdown patterns for proposed changes",
+    "Has phased implementation steps (1-5) with specific file targets",
+    "Includes trade-off analysis section acknowledging complexity costs",
+    "Defines scope boundaries (out of scope section)"
+  ],
+  "focus_areas": [
+    "evidence",
+    "structure",
+    "actionability"
+  ]
+}

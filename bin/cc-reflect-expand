@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+
+# CC-Reflect-Expand: Thought-agent spawner
+# Expands a reflection seed into a detailed prompt
+
+set -e
+
+# Source shared utilities and validators
+# WHY: Resolve symlinks to find actual script location for global install
+# CONTEXT: When installed via symlink (e.g., ~/.local/bin/cc-reflect-expand -> project/bin/cc-reflect-expand),
+#          we need to find the real project directory to source lib/*.sh files
+# TESTED BY: Global install via install.sh install-global
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+source "$SCRIPT_DIR/../lib/validators.sh"
+source "$SCRIPT_DIR/../lib/prompt-builder.sh"
+
+MODE="$1" # "interactive" or "auto"
+SEED_ID="$2"
+PROMPT_FILE="$3"
+
+cc_log_info "cc-reflect-expand started"
+cc_log_debug "Mode: $MODE"
+cc_log_debug "Seed ID: $SEED_ID"
+cc_log_debug "Prompt file: ${PROMPT_FILE:-<not provided>}"
+
+# Validate required parameters
+if ! cc_require_param "MODE" "$MODE" "SEED_ID" "$SEED_ID"; then
+    echo "Usage: cc-reflect-expand {interactive|auto} SEED_ID [PROMPT_FILE]" >&2
+    exit 1
+fi
+
+# Validate mode
+if ! validate_mode "$MODE"; then
+    exit 1
+fi
+
+# Validate seed ID format
+if ! validate_seed_id "$SEED_ID"; then
+    exit 1
+fi
+
+# Get paths
+REFLECTION_BIN="$SCRIPT_DIR"
+REFLECTION_BASE="${REFLECTION_BASE:-${HOME}/.claude/reflections}"
+REFLECTION_RESULTS="${REFLECTION_BASE}/results"
+
+# Get permissions flag
+PERMISSIONS_FLAG=$(cc_get_permissions_flag)
+cc_log_debug "Permissions flag: ${PERMISSIONS_FLAG:-<none>}"
+
+# Get model flag
+MODEL_FLAG=$(cc_get_model_flag)
+cc_log_debug "Model flag: ${MODEL_FLAG:-<default sonnet>}"
+
+# Ensure results directory exists
+mkdir -p "$REFLECTION_RESULTS"
+
+# Get seed JSON using state manager
+cc_log_info "Retrieving seed data for $SEED_ID"
+SEED_JSON=$(cc_bun_run "$REFLECTION_BIN/../lib/reflection-state.ts" get "$SEED_ID")
+
+if [ $? -ne 0 ] || [ -z "$SEED_JSON" ] || [ "$SEED_JSON" = "null" ]; then
+    cc_log_error "Failed to retrieve seed: $SEED_ID"
+    echo "Error: Seed $SEED_ID not found" >&2
+    echo "Check logs at: $CC_LOG_FILE" >&2
+    read -p "Press Enter to continue..."
+    exit 1
+fi
+
+cc_log_debug "Retrieved seed JSON: $SEED_JSON"
+
+# Parse seed details for display
+SEED_TITLE=$(echo "$SEED_JSON" | bun -e "const s = JSON.parse(await Bun.stdin.text()); console.log(s.title);")
+
+# Determine output file path
+# If PROMPT_FILE provided (Ctrl-G flow), write there; otherwise use result.md
+if [ -n "$PROMPT_FILE" ] && [ -f "$PROMPT_FILE" ]; then
+    OUTPUT_FILE="$PROMPT_FILE"
+    cc_log_info "Writing to prompt file (Ctrl-G flow): $OUTPUT_FILE"
+else
+    OUTPUT_FILE="${REFLECTION_RESULTS}/${SEED_ID}-result.md"
+    cc_log_info "Writing to result file (standalone flow): $OUTPUT_FILE"
+fi
+
+cc_log_info "Launching thought-agent in $MODE mode"
+
+# Show context banner (title only - full rationale is in seed JSON)
+cat >/dev/tty <<EOF
+╔════════════════════════════════════════════════════════════════╗
+║              🧠 Reflection Thought-Agent                       ║
+╚════════════════════════════════════════════════════════════════╝
+
+Expanding: $SEED_TITLE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Launching thought-agent to expand this reflection...
+Full context (including detailed rationale) provided in seed JSON below.
+Result will be saved to: $(basename $OUTPUT_FILE)
+
+EOF
+
+# Launch thought-agent based on mode
+if [ "$MODE" = "interactive" ]; then
+    # Interactive mode - spawn new tmux window with custom system prompt
+    # User can interact naturally with Claude and manually switch back when done
+    cc_log_info "Spawning interactive thought-agent in new tmux window"
+
+    # Build system prompt using modular builder and save to temp file
+    SYSTEM_PROMPT_FILE=$(cc_mktemp "system-prompt-$SEED_ID")
+    cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
+
+    # Generate prompt with seed context
+    cat >"$SYSTEM_PROMPT_FILE" <<PROMPT_EOF
+$(build_system_prompt expand-interactive "$OUTPUT_FILE")
+
+**Reflection Seed JSON:**
+\`\`\`json
+$SEED_JSON
+\`\`\`
+PROMPT_EOF
+
+    # Validate tmux environment
+    if cc_in_tmux; then
+        cc_log_debug "Running in tmux environment"
+
+        # Check if we have ORIGINAL_TMUX from cc-reflect
+        if [ -n "${ORIGINAL_TMUX}" ] && cc_validate_tmux_session "$ORIGINAL_TMUX"; then
+            cc_log_debug "Using ORIGINAL_TMUX: $ORIGINAL_TMUX"
+            TMUX="$ORIGINAL_TMUX" tmux new-window -n "reflect:${SEED_ID:0:8}"
+            # Send command with system prompt, then auto-execute
+            TMUX="$ORIGINAL_TMUX" tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+            # Wait for Claude to start, then prefill input with starter prompt
+            sleep 1
+            TMUX="$ORIGINAL_TMUX" tmux send-keys "Begin investigation"
+        else
+            cc_log_debug "Using current TMUX session"
+            tmux new-window -n "reflect:${SEED_ID:0:8}"
+            # Send command with system prompt, then auto-execute
+            tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+            # Wait for Claude to start, then prefill input with starter prompt
+            sleep 1
+            tmux send-keys "Begin investigation"
+        fi
+    else
+        cc_log_error "Not in tmux environment - cannot spawn interactive window"
+        echo "Error: Interactive mode requires tmux" >&2
+        exit 1
+    fi
+
+    echo "" >/dev/tty
+    echo "✅ Interactive thought-agent launched in new tmux window" >/dev/tty
+    echo "   Switch to it with Ctrl+A n (or your tmux next-window binding)" >/dev/tty
+    echo "   Input box prefilled with starter prompt - review and hit Enter" >/dev/tty
+    echo "   Result should be saved to: $OUTPUT_FILE" >/dev/tty
+    echo "" >/dev/tty
+    sleep 1
+
+else
+    # Auto mode - spawn tmux window with auto-submit (use current TMUX only)
+    # Simpler than interactive: just use current tmux, auto-submit immediately
+    cc_log_info "Spawning auto thought-agent in new tmux window"
+
+    # Save system prompt to temp file
+    SYSTEM_PROMPT_FILE=$(cc_mktemp "system-prompt-$SEED_ID")
+    cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
+
+    # Build system prompt using modular builder
+    cat >"$SYSTEM_PROMPT_FILE" <<PROMPT_EOF
+$(build_system_prompt expand-auto "$OUTPUT_FILE")
+
+**Reflection Seed JSON:**
+\`\`\`json
+$SEED_JSON
+\`\`\`
+PROMPT_EOF
+
+    # Spawn in current tmux (simpler than interactive's dual-branch approach)
+    if cc_in_tmux; then
+        cc_log_debug "Spawning in current tmux session"
+        tmux new-window -n "reflect:${SEED_ID:0:8}"
+        # Use -p flag to auto-execute (no input box, runs immediately)
+        tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' -p "Begin investigation" --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+    else
+        cc_log_error "Not in tmux environment - auto mode requires tmux"
+        echo "Error: Auto mode requires tmux for tool access and visibility" >&2
+        exit 1
+    fi
+
+    echo "" >/dev/tty
+    echo "✅ Auto thought-agent launched in new tmux window" >/dev/tty
+    echo "   Running with -p flag (non-interactive, auto-executes)" >/dev/tty
+    echo "   Result will be written to: $OUTPUT_FILE" >/dev/tty
+    echo "   Close the window when done" >/dev/tty
+    echo "" >/dev/tty
+    sleep 1
+fi
+
+# Script complete - both modes spawn tmux windows
+# Interactive: dual-branch (ORIGINAL_TMUX + current), prefilled input, manual Enter
+# Auto: single-branch (current TMUX only), uses -p flag to auto-execute

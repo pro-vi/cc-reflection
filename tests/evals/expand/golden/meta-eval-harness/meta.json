@@ -1,0 +1,17 @@
+{
+  "name": "meta-eval-harness",
+  "description": "Meta test: expansion about building the eval harness itself. Tests the system's ability to reflect on its own infrastructure.",
+  "why_its_good": [
+    "Cites actual file paths with line numbers (lib/prompt-builder.sh:157-198)",
+    "References specific commits (5b99f34)",
+    "Provides complete directory structure for implementation",
+    "Defines 6 concrete evaluation criteria with weights",
+    "Includes actionable phases (1-4) for implementation",
+    "Has explicit 'Criteria for Done' section"
+  ],
+  "focus_areas": [
+    "structure",
+    "specificity",
+    "actionability"
+  ]
+}

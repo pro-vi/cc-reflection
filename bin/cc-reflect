@@ -1,0 +1,348 @@
+#!/usr/bin/env bash
+
+# CC-Reflect: Reflection-aware editor for Claude Code
+# Extends the claude-editor-hook pattern to inject reflection seeds into fzf menu
+
+# Source shared utilities
+# WHY: Resolve symlinks to find actual script location for global install
+# CONTEXT: When installed via symlink (e.g., ~/.local/bin/cc-reflect -> project/bin/cc-reflect),
+#          we need to find the real project directory to source lib/*.sh files
+# TESTED BY: Global install via install.sh install-global
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# --check: delegate to install.sh check (proves binary is in PATH)
+if [ "${1:-}" = "--check" ]; then
+    exec "$SCRIPT_DIR/../install.sh" check
+fi
+
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+source "$SCRIPT_DIR/../lib/menu-utils.sh"
+source "$SCRIPT_DIR/../lib/prompt-builder.sh"
+
+cc_log_info "cc-reflect started"
+cc_log_debug "Args: $*"
+cc_log_debug "TMUX: $TMUX"
+cc_log_debug "CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID:-<not set>}"
+
+# Store the file path
+FILE="$1"
+SAFE_FILE=$(printf '%q' "$FILE")
+
+# Get session ID using shared function
+SESSION_ID=$(cc_get_session_id)
+cc_log_info "Using session: $SESSION_ID"
+
+# Export for nested shells (tmux session needs same session ID)
+export CLAUDE_SESSION_ID="$SESSION_ID"
+
+# Reflection paths
+REFLECTION_BASE="${REFLECTION_BASE:-${HOME}/.claude/reflections}"
+REFLECTION_SEEDS="${REFLECTION_BASE}/seeds/${SESSION_ID}"
+REFLECTION_BIN="$SCRIPT_DIR" # Use resolved script directory
+
+cc_log_debug "Reflection seeds dir: $REFLECTION_SEEDS"
+cc_log_debug "Reflection bin dir: $REFLECTION_BIN"
+
+# Get permissions flag
+PERMISSIONS_FLAG=$(cc_get_permissions_flag)
+cc_log_debug "Permissions flag: ${PERMISSIONS_FLAG:-<none>}"
+
+# Get model flag
+MODEL_FLAG=$(cc_get_model_flag)
+cc_log_debug "Model flag: ${MODEL_FLAG:-<default sonnet>}"
+
+# Save TMUX info before unsetting (for child processes to detect tmux context)
+export ORIGINAL_TMUX="$TMUX"
+
+# Unset TMUX to allow nested sessions
+unset TMUX
+
+# Build menu using extracted utilities
+# WHY: Menu construction moved to lib/menu-utils.sh for testability
+cc_log_debug "Building menu..."
+
+# Get reflection seeds if available (current session only)
+SEEDS_JSON=""
+cc_log_debug "Checking for reflection seeds..."
+if command -v bun &>/dev/null; then
+    SEEDS_JSON=$(cc_bun_run "$REFLECTION_BIN/../lib/reflection-state.ts" list)
+    if [ $? -eq 0 ]; then
+        cc_log_debug "Seeds JSON: $SEEDS_JSON"
+        if [ -n "$SEEDS_JSON" ] && [ "$SEEDS_JSON" != "[]" ]; then
+            SEED_COUNT=$(echo "$SEEDS_JSON" | bun -e "console.log(JSON.parse(await Bun.stdin.text()).length)")
+            cc_log_info "Added $SEED_COUNT reflection seeds to menu"
+        fi
+    else
+        cc_log_warn "Failed to list reflection seeds"
+    fi
+else
+    cc_log_warn "bun not found, skipping reflection seeds"
+fi
+
+# Show popup with fzf and execute selection
+# Note: Menu is built inside the tmux session loop to allow dynamic updates
+# Note: Requires a proper terminal (stdin/stdout/stderr must be TTY)
+
+# Define the tmux command block that will be used in both cases
+TMUX_COMMAND="
+    # Set SCRIPT_DIR for nested shell
+    export SCRIPT_DIR='$SCRIPT_DIR'
+
+    # Source shared utilities in nested shell
+    source '$SCRIPT_DIR/../lib/cc-common.sh'
+    source '$SCRIPT_DIR/../lib/menu-utils.sh'
+    source '$SCRIPT_DIR/../lib/prompt-builder.sh'
+
+    # Menu loop - allows rebuilding after toggle
+    while true; do
+        # Build menu using helper script (allows reload from fzf bindings)
+        MENU=\$(\"$REFLECTION_BIN/cc-reflect-build-menu\" \"$FILE\")
+
+        # Get current mode for logging
+        EXPANSION_MODE=\$(cc_get_expansion_mode)
+        PERMISSIONS_MODE=\$(cc_get_permissions_mode)
+        MODEL_SETTING=\$(cc_get_model)
+        FILTER_MODE=\$(cc_get_menu_filter)
+        cc_log_debug \"Menu loop iteration - mode: \$EXPANSION_MODE, permissions: \$PERMISSIONS_MODE, model: \$MODEL_SETTING, filter: \$FILTER_MODE\"
+
+        # Show menu with preview
+        # Pass full MENU (label<TAB>command) to fzf, display only label using --with-nth
+        # Preview script receives full line including command (needed to extract seed ID)
+        choice=\$(echo \"\$MENU\" | fzf \
+            --height=40 \
+            --prompt='Command: ' \
+            --border \
+            --reverse \
+            --ansi \
+            --delimiter=\$'\\t' \
+            --with-nth=1 \
+            --preview=\"$SCRIPT_DIR/cc-reflect-preview-seed {}\" \
+            --preview-window=right:60%:wrap:hidden \
+            --header=\"\$($SCRIPT_DIR/cc-reflect-header)\" \
+            --bind='ctrl-/:toggle-preview' \
+            --bind='esc:abort' \
+            --bind=\"ctrl-d:execute($SCRIPT_DIR/cc-reflect-delete-seed {})+reload($SCRIPT_DIR/cc-reflect-build-menu $SAFE_FILE)\" \
+            --bind=\"ctrl-a:execute($SCRIPT_DIR/cc-reflect-archive-seed {})+reload($SCRIPT_DIR/cc-reflect-build-menu $SAFE_FILE)\" \
+            --bind=\"ctrl-f:execute-silent(cc-reflect-toggle-filter)+transform-header($SCRIPT_DIR/cc-reflect-header)+reload($SCRIPT_DIR/cc-reflect-build-menu $SAFE_FILE)\" \
+            --bind='enter:transform:[[ ! {} =~ ═══ ]] && echo accept || echo down')
+
+        if [ -z \"\$choice\" ]; then
+            # User cancelled (ESC) - exit menu
+            exit 0
+        fi
+
+        cc_log_debug \"Selected: \$choice\"
+
+        # Extract command from 'label<TAB>command' format using shared parser
+        cmd=\$(cc_parse_menu_command \"\$choice\")
+        if [ \$? -ne 0 ]; then
+            echo \"Error: Failed to parse menu selection\" >&2
+            read
+            exit 1
+        fi
+
+        cc_log_info \"Executing: \$cmd\"
+
+        if [ \"\$cmd\" = \"echo\" ]; then
+            # Separator - ignore and loop back
+            continue
+        elif [[ \"\$cmd\" == \"cc-reflect-expand \"* ]]; then
+            # Reflection seed selected - parse mode and seed ID
+            MODE=\$(echo \"\$cmd\" | cut -d' ' -f2)
+            SEED_ID=\$(echo \"\$cmd\" | cut -d' ' -f3)
+            cc_log_info \"Expanding reflection seed: \$SEED_ID (mode: \$MODE)\"
+            exec \"$REFLECTION_BIN/cc-reflect-expand\" \"\$MODE\" \"\$SEED_ID\" \"$FILE\"
+        elif [ \"\$cmd\" = \"claude-spawn-interactive\" ]; then
+            # Interactive enhancement
+            cc_log_info \"Spawning interactive Claude for prompt enhancement\"
+            # Get current toggle flags
+            MODEL_FLAG=\$(cc_get_model_flag)
+            PERMISSIONS_FLAG=\$(cc_get_permissions_flag)
+            # Build system prompt using modular builder
+            ENHANCE_PROMPT_FILE=\$(mktemp)
+            build_system_prompt enhance-interactive > \"\$ENHANCE_PROMPT_FILE\"
+            tmux new-window
+            tmux send-keys \"FILE='$FILE' claude \$MODEL_FLAG \$PERMISSIONS_FLAG --append-system-prompt \\\"\\\$(cat \$ENHANCE_PROMPT_FILE)\\\" && rm \$ENHANCE_PROMPT_FILE\" Enter
+            # Wait for Claude to start, then prefill input with starter prompt
+            sleep 1
+            tmux send-keys \"Read and enhance the prompt\"
+        elif [ \"\$cmd\" = \"claude-enhance-auto\" ]; then
+            # Non-interactive enhancement
+            cc_log_info \"Running auto prompt enhancement\"
+            # Get current toggle flags
+            MODEL_FLAG=\$(cc_get_model_flag)
+            PERMISSIONS_FLAG=\$(cc_get_permissions_flag)
+            # Build system prompt using modular builder
+            ENHANCE_PROMPT=\$(build_system_prompt enhance-auto)
+            FILE='$FILE' claude -p --verbose \$MODEL_FLAG \$PERMISSIONS_FLAG \"\$ENHANCE_PROMPT\"
+            echo \"Press Enter to return to Claude Code...\"
+            read
+        elif [ \"\$cmd\" = \"cc-reflect-toggle-mode\" ]; then
+            # Toggle expansion mode
+            cc_log_info \"Toggling expansion mode...\"
+            cc-reflect-toggle-mode > /dev/null
+            if [ \$? -eq 0 ]; then
+                # Mode toggled successfully - loop back to rebuild menu
+                cc_log_info \"Mode toggled, rebuilding menu...\"
+                continue
+            else
+                echo \"Failed to toggle mode\"
+                echo \"Press Enter to return...\"
+                read
+                continue
+            fi
+        elif [ \"\$cmd\" = \"cc-reflect-toggle-permissions\" ]; then
+            # Toggle permissions mode
+            cc_log_info \"Toggling permissions mode...\"
+            cc-reflect-toggle-permissions > /dev/null
+            if [ \$? -eq 0 ]; then
+                # Permissions toggled successfully - loop back to rebuild menu
+                cc_log_info \"Permissions toggled, rebuilding menu...\"
+                continue
+            else
+                echo \"Failed to toggle permissions\"
+                echo \"Press Enter to return...\"
+                read
+                continue
+            fi
+        elif [ \"\$cmd\" = \"cc-reflect-toggle-model\" ]; then
+            # Cycle model (opus → sonnet → haiku → opus)
+            cc_log_info \"Cycling model...\"
+            cc-reflect-toggle-haiku > /dev/null
+            if [ \$? -eq 0 ]; then
+                cc_log_info \"Model cycled, rebuilding menu...\"
+                continue
+            else
+                echo \"Failed to cycle model\"
+                echo \"Press Enter to return...\"
+                read
+                continue
+            fi
+        elif [ \"\$cmd\" = \"cc-reflect-toggle-context\" ]; then
+            # Toggle context turns
+            cc_log_info \"Toggling context turns...\"
+            cc-reflect-toggle-context > /dev/null
+            if [ \$? -eq 0 ]; then
+                cc_log_info \"Context toggled, rebuilding menu...\"
+                continue
+            else
+                echo \"Failed to toggle context\"
+                echo \"Press Enter to return...\"
+                read
+                continue
+            fi
+        elif [ \"\$cmd\" = \"cc-reflect-toggle-filter\" ]; then
+            # Toggle filter mode
+            cc_log_info \"Toggling filter mode...\"
+            cc-reflect-toggle-filter > /dev/null
+            if [ \$? -eq 0 ]; then
+                cc_log_info \"Filter toggled, rebuilding menu...\"
+                continue
+            else
+                echo \"Failed to toggle filter\"
+                echo \"Press Enter to return...\"
+                read
+                continue
+            fi
+        elif [ \"\$cmd\" = \"cc-reflect-archive-outdated\" ]; then
+            # Archive only outdated (💤) seeds - keeps fresh ones
+            cc_log_info \"Archiving outdated seeds for session: $SESSION_ID\"
+            RESULT=\$(bun \"$SCRIPT_DIR/../lib/reflection-state.ts\" archive-outdated 2>/dev/null)
+            ARCHIVED=\$(echo \"\$RESULT\" | bun -e \"console.log(JSON.parse(await Bun.stdin.text()).archived)\" 2>/dev/null)
+            if [ \"\$ARCHIVED\" = \"0\" ]; then
+                echo \"No outdated seeds to archive.\"
+            else
+                echo \"📦 Archived \$ARCHIVED outdated seed(s)\"
+            fi
+            cc_log_info \"Archived \$ARCHIVED outdated seed(s)\"
+            sleep 1
+            continue
+        elif [ \"\$cmd\" = \"cc-reflect-archive-all\" ]; then
+            # Archive all seeds for current session (soft delete) - hidden from menu but still functional
+            cc_log_info \"Archiving all seeds for session: $SESSION_ID\"
+            echo -n \"Archive all active seeds? They will be hidden but preserved. [y/N]: \"
+            read confirmation
+            if [ \"\$confirmation\" = \"y\" ] || [ \"\$confirmation\" = \"Y\" ]; then
+                RESULT=\$(bun \"$SCRIPT_DIR/../lib/reflection-state.ts\" archive-all 2>/dev/null)
+                ARCHIVED=\$(echo \"\$RESULT\" | bun -e \"console.log(JSON.parse(await Bun.stdin.text()).archived)\" 2>/dev/null)
+                cc_log_info \"Archived \$ARCHIVED seed(s)\"
+                echo \"✓ Archived \$ARCHIVED seed(s)\"
+            else
+                echo \"Cancelled.\"
+                cc_log_info \"Archive seeds cancelled by user\"
+            fi
+            echo \"\"
+            echo \"Press Enter to continue...\"
+            read
+            continue
+        elif [ \"\$cmd\" = \"cc-reflect-purge-archived\" ]; then
+            # Permanently delete all archived seeds
+            cc_log_info \"Purging archived seeds\"
+            echo -n \"Permanently delete ALL archived seeds? This cannot be undone. [y/N]: \"
+            read confirmation
+            if [ \"\$confirmation\" = \"y\" ] || [ \"\$confirmation\" = \"Y\" ]; then
+                RESULT=\$(bun \"$SCRIPT_DIR/../lib/reflection-state.ts\" delete-archived 2>/dev/null)
+                DELETED=\$(echo \"\$RESULT\" | bun -e \"console.log(JSON.parse(await Bun.stdin.text()).deleted)\" 2>/dev/null)
+                cc_log_info \"Deleted \$DELETED archived seed(s)\"
+                echo \"✓ Deleted \$DELETED archived seed(s)\"
+            else
+                echo \"Cancelled.\"
+                cc_log_info \"Purge archived cancelled by user\"
+            fi
+            echo \"\"
+            echo \"Press Enter to continue...\"
+            read
+            continue
+        else
+            # Regular editor command - validate against allowlist for security
+            # WHY: Prevent shell injection via malicious seed data
+            # SECURITY: Only allow known-safe commands
+            cc_log_info \"Validating command: \$cmd\"
+
+            case \"\$cmd\" in
+                # Reflection expansion commands
+                cc-reflect-expand\ interactive\ seed-*|cc-reflect-expand\ auto\ seed-*)
+                    cc_log_info \"Launching reflection expansion: \$cmd\"
+                    exec bash -c \"\$cmd\"
+                    ;;
+                # Editor commands with escaped file paths
+                vi\ *|code\ -w\ *|cursor\ -w\ *|windsurf\ -w\ *|zed\ --wait\ *|agy\ -w\ *)
+                    cc_log_info \"Launching editor: \$cmd\"
+                    exec bash -c \"\$cmd\"
+                    ;;
+                # Separator (echo command)
+                echo)
+                    exec bash -c \"\$cmd\"
+                    ;;
+                # Reject everything else
+                *)
+                    cc_log_error \"Unauthorized command rejected: \$cmd\"
+                    echo \"Error: Unauthorized command: \$cmd\" >&2
+                    echo \"This command is not in the allowlist for security reasons.\" >&2
+                    echo \"Press Enter to return...\"
+                    read
+                    exit 1
+                    ;;
+            esac
+        fi
+    done
+"
+
+# Verify all file descriptors are terminals
+if [ -t 0 ] && [ -t 1 ] && [ -t 2 ]; then
+    # All streams are terminals - proceed with tmux + fzf
+    cc_log_info "Terminal validation passed - launching tmux"
+    exec tmux new-session bash -c "$TMUX_COMMAND"
+else
+    # At least one stream is not a terminal - fail gracefully
+    cc_log_error "cc-reflect requires a proper terminal (stdin, stdout, stderr)"
+    echo "ERROR: cc-reflect must be run from a terminal." >&2
+    exit 1
+fi

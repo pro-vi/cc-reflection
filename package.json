@@ -1,0 +1,49 @@
+{
+  "name": "cc-reflection",
+  "version": "1.0.0",
+  "description": "Meta-cognitive self-reflection system for Claude Code",
+  "type": "module",
+  "scripts": {
+    "list": "bun lib/reflection-state.ts list",
+    "list-all": "bun lib/reflection-state.ts list-all",
+    "cleanup": "bun lib/reflection-state.ts cleanup",
+    "setup": "./install.sh",
+    "uninstall": "./install.sh uninstall",
+    "check": "./install.sh check",
+    "test": "tests/run_all_tests.sh",
+    "test:unit": "tests/run_all_tests.sh unit",
+    "test:integration": "tests/run_all_tests.sh integration",
+    "test:contracts": "bats tests/integration/test_contracts.bats",
+    "test:env": "bats tests/unit/test_env_vars.bats"
+  },
+  "bin": {
+    "cc-reflect": "./bin/cc-reflect",
+    "cc-reflect-expand": "./bin/cc-reflect-expand"
+  },
+  "dependencies": {},
+  "optionalDependencies": {
+    "cc-dice": "file:../cc-dice"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.4"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "reflection",
+    "meta-cognitive",
+    "ai",
+    "llm",
+    "prompt-engineering"
+  ],
+  "author": "provi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pro-vi/cc-reflection.git"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "packageManager": "pnpm@10.18.1+sha512.77a884a165cbba2d8d1c19e3b4880eee6d2fcabd0d879121e282196b80042351d5eb3ca0935fa599da1dc51265cc68816ad2bddd2a2de5ea9fdf92adbec7cd34"
+}

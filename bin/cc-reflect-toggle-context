@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# cc-reflect-toggle-context - Cycle context turns for expand prompt
+# WHY: Provides user control over how many recent turns to inject into expand prompt
+# USES: cc_cycle_context_turns (tested in tests/unit/test_context_turns.bats)
+# VALUES: 0 (off) → 3 (default) → 5 → 10 → 0
+
+set -euo pipefail
+
+# Get script directory for sourcing libraries
+# WHY: Resolve symlinks to find actual script location for global install
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+source "$SCRIPT_DIR/lib/cc-common.sh"
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+# Get current value
+CURRENT=$(cc_get_context_turns)
+
+# Cycle to next value
+NEW_VALUE=$(cc_cycle_context_turns)
+
+if [ -n "$NEW_VALUE" ]; then
+    cc_log_debug "Cycled context turns: $CURRENT → $NEW_VALUE"
+    echo "$NEW_VALUE"
+    exit 0
+else
+    cc_log_error "Failed to cycle context turns"
+    exit 1
+fi

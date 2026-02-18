@@ -1,0 +1,17 @@
+{
+  "name": "pattern-adaptation",
+  "description": "Meta-cognitive: creating a skill to operationalize a lesson about adapting external patterns. Tests expansion's ability to turn reflection into reusable process.",
+  "why_its_good": [
+    "Creates actionable artifact (new skill) rather than just analysis",
+    "Includes concrete domain translation table with 7 concept mappings",
+    "Provides execution template with parallel agent spawning",
+    "Has example execution showing actual pattern evaluation",
+    "Links back to origin issue (FRAC-46) for provenance",
+    "Includes success criteria with testable checkboxes"
+  ],
+  "focus_areas": [
+    "actionability",
+    "valueAdd",
+    "structure"
+  ]
+}

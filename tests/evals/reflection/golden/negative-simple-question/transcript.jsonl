@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":"what does the map function do in javascript?"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"The `map()` function creates a new array by calling a provided function on every element in the calling array.\n\nExample:\n```javascript\nconst numbers = [1, 2, 3];\nconst doubled = numbers.map(x => x * 2);\n// doubled is [2, 4, 6]\n```\n\nIt doesn't modify the original array."}]}}
+{"type":"user","message":{"role":"user","content":"got it, thanks"}}

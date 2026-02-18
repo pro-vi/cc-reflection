@@ -1,0 +1,13 @@
+{
+  "title": "Configuration design: depth-scaled reflection triggers",
+  "examination": "third",
+  "category": "meta",
+  "trigger": "When user iteratively refines threshold values or asks clarifying questions about when/whether to trigger",
+  "signals": {
+    "design_evolution": "Thresholds evolved from raw numbers to 'lucky' rolls (10/15/20)",
+    "user_clarification": "Stepped thresholds need reset consideration",
+    "dependency_cascade": "Exchange count → cooldown markers → compact events → SessionStart",
+    "pacing_assumption": "Longer conversations deserve more frequent reflection chances"
+  },
+  "anchor_file": "bin/post-tool-use-reflection-check.ts"
+}

@@ -1,0 +1,12 @@
+{
+  "title": "Meta: Skill vs MCP decision heuristic - jq/yq for 80%, MCP for code-dependent 20%",
+  "examination": "third",
+  "category": "Meta",
+  "trigger": "When user questions whether a new tool/MCP is needed vs using existing CLI tools, especially after experiencing performance issues with naive approaches",
+  "signals": {
+    "performance_complaint": "subagent just took 30 min to read a 400 kb openapi.json",
+    "user_challenge": "skill introduce no extra code or lib while mcp can, so q is whether external lib or code can help at all",
+    "heuristic_emerges": "jq/yq for 80%, MCP for $ref resolution"
+  },
+  "anchor_file": "~/.claude/skills/explore-file/SKILL.md"
+}

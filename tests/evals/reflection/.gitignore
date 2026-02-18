@@ -1,0 +1,8 @@
+# API keys
+.env
+
+# Generated eval results (run locally, don't commit)
+results/
+
+# Generated prompt files
+**/eval-prompt*.txt

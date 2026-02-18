@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# cc-reflect-toggle-mode - Toggle expansion mode between interactive and auto
+# WHY: Provides user control over default seed expansion behavior
+# USES: cc_toggle_expansion_mode (tested in tests/unit/test_seed_status.bats)
+
+set -euo pipefail
+
+# Get script directory for sourcing libraries
+# WHY: Resolve symlinks to find actual script location for global install
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+source "$SCRIPT_DIR/lib/cc-common.sh"
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+# Get current mode
+CURRENT_MODE=$(cc_get_expansion_mode)
+
+# Toggle to opposite mode
+if [ "$CURRENT_MODE" = "interactive" ]; then
+    NEW_MODE="auto"
+else
+    NEW_MODE="interactive"
+fi
+
+# Set new mode
+if cc_set_expansion_mode "$NEW_MODE"; then
+    cc_log_debug "Toggled mode: $CURRENT_MODE → $NEW_MODE"
+    echo "$NEW_MODE"
+    exit 0
+else
+    cc_log_error "Failed to toggle mode"
+    exit 1
+fi

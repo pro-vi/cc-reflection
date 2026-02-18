@@ -1,0 +1,32 @@
+{
+  "name": "refactor-behavioral-equivalence",
+  "description": "User question 'how do you verify' catches potential unsafe refactor, leads to case table verification pattern",
+  "why_its_good": [
+    "Real catch of subtle refactoring bug via user questioning",
+    "Creates actionable guidance (case tables, precondition mapping)",
+    "Shows how verification questions improve safety",
+    "Identifies 'Same Signature Trap' as reusable anti-pattern"
+  ],
+  "transcript_signals": {
+    "engineering": [
+      "Functions with identical parameters can have inverted semantics",
+      "Verifying happy path is not enough for behavioral equivalence",
+      "Need case tables mapping all precondition states"
+    ],
+    "meta": [
+      "User questioning triggers skill improvement",
+      "Verification is a first-class concern in refactoring",
+      "Semantic mismatches hide in similar function names"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "Gap between happy path verification and full behavioral equivalence",
+    "should_cite": "User question about verifying before/after equivalence",
+    "should_propose": "Add precondition case tables to refactor verification"
+  },
+  "eval_criteria": {
+    "recall": "Must mention verification or behavioral equivalence",
+    "precision": "Should focus on the verification gap, not just the specific fix",
+    "signal_detection": "Should catch the user question as the trigger"
+  }
+}

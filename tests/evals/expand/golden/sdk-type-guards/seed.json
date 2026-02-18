@@ -1,0 +1,14 @@
+{
+  "id": "seed-1766144464381-30qiqo0",
+  "title": "Type safety: SDK type guards underutilized across codebase",
+  "rationale": "This session cleaned up 12 casts in src/lib/agents/chat/ by using AI SDK's exported guards (isTextUIPart, isToolOrDynamicToolUIPart, etc.) instead of manual type checking.\n\nPattern discovered:\n- SDK exports type guards we weren't using\n- After SDK guard narrows, properties are typed - no casts needed\n- 'in' operator also narrows (e.g., 'name' in error → error.name accessible)\n\nFiles treated this session: autosend.ts, parts.ts, types.ts, use-agent-chat.svelte.ts, stream/+server.ts, message-utils.ts\n\nFiles NOT in this PR that likely need same treatment:\n- src/lib/server/ai/message-utils.ts (lines 57, 95, 238 have casts)\n- src/lib/components/ChatView.svelte (partsJson rendering has casts)\n- Any file with pattern: (p as { type?: string }).type === 'text'\n\nMeta lesson: When integrating typed SDKs, grep for 'export function is' in node_modules to discover available guards before writing custom ones.",
+  "anchors": [
+    {
+      "path": "src/lib/agents/chat/part-guards.ts",
+      "context_start_text": "IDEAL STATE",
+      "context_end_text": "CURRENT STATE"
+    }
+  ],
+  "ttl_hours": 24,
+  "created_at": "2025-12-19T11:41:04.381Z"
+}

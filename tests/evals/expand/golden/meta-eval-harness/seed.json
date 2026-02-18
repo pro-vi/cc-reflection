@@ -1,0 +1,14 @@
+{
+  "id": "seed-1769334975287-e8khuke",
+  "title": "Expand agent eval harness with LLM-as-judge",
+  "rationale": "The expand agent prompt was hardened with defense-in-depth anchoring (mission contract, 10x file mentions, verification gate, checklist). Property-based tests verify structural elements exist, but we lack quality evaluation.\n\n**Gap**: No way to measure if expansions are actually GOOD - just that the file was written.\n\n**Solution**: Build eval harness using seed→expansion golden pairs:\n1. Golden structure: seed.json + expansion.md (reference known-good)\n2. Harness feeds seed to agent, captures output\n3. LLM-as-judge compares output to reference on 6 criteria:\n   - Contract fulfillment (wrote file)\n   - Evidence-based (cites real files, git history)\n   - Structure (Context/Concern/Evidence/Analysis/Recommendation/Criteria)\n   - Specificity (concrete paths, line numbers, code)\n   - Actionability (coding agent can execute)\n   - Value-add (insight beyond rationale)\n\nPattern exists in tests/evals/reflection/ - reuse scorer.ts approach with OpenRouter judge.\n\nExpected output: tests/evals/expand/ directory with harness, scorer, and 2-3 golden cases.",
+  "anchors": [
+    {
+      "path": "lib/prompt-builder.sh",
+      "context_start_text": "_expand_context()",
+      "context_end_text": "Completion Checklist"
+    }
+  ],
+  "ttl_hours": 72,
+  "created_at": "2026-01-25T09:56:15.287Z"
+}

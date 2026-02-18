@@ -1,0 +1,10 @@
+{
+  "title": "NEGATIVE TEST - No insight expected",
+  "examination": "third",
+  "category": "meta",
+  "trigger": null,
+  "signals": {},
+  "anchor_file": null,
+  "is_negative_test": true,
+  "expected_output": "NO_SEEDS"
+}

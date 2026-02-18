@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# cc-reflect-header: Output dynamic fzf header with current filter and context
+# Usage: cc-reflect-header
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+
+FILTER=$(cc_get_menu_filter)
+CONTEXT=$(cc_get_context_turns)
+
+# Format context display
+if [ "$CONTEXT" = "0" ]; then
+    CONTEXT_DISPLAY="off"
+else
+    CONTEXT_DISPLAY="${CONTEXT}t"
+fi
+
+echo "💡 ENTER=Expand | ^/=Preview | ^D=Del | ^A=Arch | ^F=Filter[$FILTER] | 💬[$CONTEXT_DISPLAY] | ESC"

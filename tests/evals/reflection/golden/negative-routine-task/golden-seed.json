@@ -1,0 +1,10 @@
+{
+  "title": "NEGATIVE TEST - No insight expected",
+  "examination": "first",
+  "category": "engineering",
+  "trigger": null,
+  "signals": {},
+  "anchor_file": "package.json",
+  "is_negative_test": true,
+  "expected_output": "NO_SEEDS"
+}

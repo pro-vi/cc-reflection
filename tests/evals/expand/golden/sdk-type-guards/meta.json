@@ -1,0 +1,17 @@
+{
+  "name": "sdk-type-guards",
+  "description": "Technical refactoring: analyzing SDK type guards to identify unnecessary type casts. Tests expansion's ability to distinguish intentional vs unnecessary casts.",
+  "why_its_good": [
+    "Cites exact line numbers (57, 95, 238) in target file",
+    "Shows SDK exports from node_modules/ai/dist/index.d.ts",
+    "Analyzes each cast individually with INTENTIONAL vs UNNECESSARY verdict",
+    "Provides before/after code snippets for fixes",
+    "Identifies boundary conditions (unknown vs typed union)",
+    "Includes concrete success criteria with test commands"
+  ],
+  "focus_areas": [
+    "evidence",
+    "specificity",
+    "actionability"
+  ]
+}

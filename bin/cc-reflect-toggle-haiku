@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# cc-reflect-toggle-haiku - Cycle model selection (opus → sonnet → haiku → opus)
+# WHY: Provides user control over model selection for all Claude invocations
+# TESTED BY: tests/integration/test_toggle_haiku.bats
+
+set -euo pipefail
+
+# Get script directory for sourcing libraries
+# WHY: Resolve symlinks to find actual script location for global install
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+source "$SCRIPT_DIR/lib/cc-common.sh"
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+# Get current model
+CURRENT_MODEL=$(cc_get_model)
+
+# Cycle: opus → sonnet → haiku → opus
+case "$CURRENT_MODEL" in
+    opus)   NEW_MODEL="sonnet" ;;
+    sonnet) NEW_MODEL="haiku" ;;
+    haiku)  NEW_MODEL="opus" ;;
+    *)      NEW_MODEL="opus" ;;
+esac
+
+# Set new model
+if cc_set_model "$NEW_MODEL"; then
+    cc_log_debug "Toggled model: $CURRENT_MODEL → $NEW_MODEL"
+    echo "$NEW_MODEL"
+    exit 0
+else
+    cc_log_error "Failed to toggle model"
+    exit 1
+fi

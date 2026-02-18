@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# cc-reflect-toggle-filter - Cycle menu filter: active/outdated/archived/all
+# WHY: Provides user control over which seeds appear in menu
+# TESTED BY: tests/unit/test_seed_status.bats
+
+set -euo pipefail
+
+# Get script directory for sourcing libraries
+# WHY: Resolve symlinks to find actual script location for global install
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+source "$SCRIPT_DIR/lib/cc-common.sh"
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+# Cycle filter (active -> outdated -> archived -> all -> active)
+NEW_FILTER=$(cc_cycle_menu_filter)
+
+if [ -n "$NEW_FILTER" ]; then
+    cc_log_debug "Cycled filter to: $NEW_FILTER"
+    echo "$NEW_FILTER"
+    exit 0
+else
+    cc_log_error "Failed to cycle filter"
+    exit 1
+fi

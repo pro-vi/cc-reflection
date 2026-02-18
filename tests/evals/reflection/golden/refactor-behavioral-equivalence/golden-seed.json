@@ -1,0 +1,13 @@
+{
+  "title": "Refactor verification: behavioral equivalence beyond happy path",
+  "examination": "first",
+  "category": "engineering",
+  "trigger": "When user asks 'how do you verify the before and after are the same' during refactoring",
+  "signals": {
+    "user_question": "How do you verify that the after and before is the same?",
+    "same_signature_trap": "Functions with identical parameters can have inverted semantics",
+    "precondition_mapping": "Need to verify all precondition states, not just happy path",
+    "semantic_mismatch": "createX vs getX, ensureX vs requireX have different behaviors"
+  },
+  "anchor_file": "src/lib/utils.ts"
+}

@@ -1,0 +1,302 @@
+#!/usr/bin/env bash
+
+# cc-reflect-preview-seed: Display context-aware preview for fzf menu items
+# Usage: cc-reflect-preview-seed "menu_line"
+#
+# Shows:
+# - Seed details for reflection seeds (🌱💭💤📦)
+# - Contextual help for other menu items (editors, toggles, etc.)
+# - General help + haiku for separators
+
+set -e
+
+# Source shared utilities for logging and session ID
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+
+MENU_LINE="$1"
+
+# If no line provided, show nothing
+if [ -z "$MENU_LINE" ]; then
+    exit 0
+fi
+
+# ============================================================================
+# NON-SEED MENU ITEMS
+# ============================================================================
+
+# Section headers (══) - show general help with haiku
+# Note: Contains ANSI escape codes, so check for ══ pattern
+if [[ "$MENU_LINE" =~ ══.*══ ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  🧠 CC-REFLECTION                                              ║
+╚════════════════════════════════════════════════════════════════╝
+
+    Seeds of thought take root,
+    Three examinations bloom—
+    Wisdom grows in time.
+
+                        — 吾日三省吾身
+
+───────────────────────────────────────────────────────────────────
+🌿 Freshness:
+    🌱  Just planted     < 24 hours
+    💭  Growing          1 - 3 days
+    💤  Stale            > 3 days
+    📦  Archived         manual
+
+───────────────────────────────────────────────────────────────────
+⌨️  Keybindings:
+    ENTER   Execute selected action
+    Ctrl-D  Delete seed (permanent)
+    Ctrl-A  Archive seed (soft delete)
+    Ctrl-F  Cycle filter (Active/Outdated/Archived/All)
+    Ctrl-/  Toggle this preview pane
+    ESC     Cancel and exit
+EOF
+    exit 0
+fi
+
+# Editor items (may have Nerd Font icon prefix)
+if [[ "$MENU_LINE" =~ "Edit with" ]]; then
+    # Extract editor name, handling potential Nerd Font icon prefix
+    EDITOR_NAME=$(echo "$MENU_LINE" | sed 's/.*Edit with //' | cut -d$'\t' -f1)
+    cat <<EOF
+╔════════════════════════════════════════════════════════════════╗
+║  📝 EDITOR                                                     ║
+╚════════════════════════════════════════════════════════════════╝
+
+Opens the prompt file in $EDITOR_NAME.
+
+After editing, save and close to return the modified
+prompt to Claude Code's input box.
+
+This is the standard Ctrl-G editor flow - your changes
+will be sent as your next message to Claude.
+EOF
+    exit 0
+fi
+
+# Mode toggle (with 🔄 emoji)
+if [[ "$MENU_LINE" =~ ^"🔄 Mode:" ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  🔄 EXPANSION MODE                                             ║
+╚════════════════════════════════════════════════════════════════╝
+
+Controls how seeds are expanded by the thought-agent.
+
+Interactive:
+  Opens a new tmux window for conversation with
+  the thought-agent. You can ask follow-up questions
+  and guide the expansion interactively.
+
+Auto:
+  Runs thought-agent non-interactively. The expansion
+  completes automatically and returns the result.
+
+Toggle to switch between modes.
+EOF
+    exit 0
+fi
+
+# Permissions toggle (with 🔒/🔓 emoji)
+if [[ "$MENU_LINE" =~ ^"🔒 Skip permissions" ]] || [[ "$MENU_LINE" =~ ^"🔓 Skip permissions" ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  🔒 PERMISSIONS MODE                                           ║
+╚════════════════════════════════════════════════════════════════╝
+
+Controls whether thought-agent runs with permission checks.
+
+Enabled (skip permissions):
+  Runs with --dangerously-skip-permissions flag.
+  Faster but less safe - agent can execute any tool
+  without confirmation.
+
+Disabled (require permissions):
+  Agent will ask for confirmation before executing
+  potentially dangerous operations.
+
+⚠️  Only enable if you trust the codebase context.
+EOF
+    exit 0
+fi
+
+# Model toggle (with 🤖 emoji)
+if [[ "$MENU_LINE" =~ ^"🤖 Model:" ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  🤖 MODEL SELECTION                                            ║
+╚════════════════════════════════════════════════════════════════╝
+
+Controls which Claude model expands seeds.
+
+Opus (default):
+  Most capable. Deep reasoning and analysis.
+  Highest quality expansions.
+
+Sonnet:
+  Fast and capable. Good balance of quality
+  and speed for most seeds.
+
+Haiku:
+  Fastest and cheapest. Good for simpler seeds
+  or when you want quick iterations.
+
+Cycles: Opus → Sonnet → Haiku → Opus
+EOF
+    exit 0
+fi
+
+# Filter toggle (with 🔍 emoji)
+if [[ "$MENU_LINE" =~ ^"🔍 Filter:" ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  🔍 MENU FILTER                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Controls which seeds appear in the menu.
+
+All:      Shows all seeds (active + outdated + archived)
+Active:   Shows only active seeds (🌱💭)
+Outdated: Shows only outdated seeds (💤)
+Archived: Shows only archived seeds (📦)
+
+Use Ctrl-F to cycle through filters quickly.
+
+Archived seeds are preserved for future meta-reflection
+analysis - reviewing what you reflected on over time.
+EOF
+    exit 0
+fi
+
+# Archive outdated seeds (with 📦 emoji)
+if [[ "$MENU_LINE" =~ ^"📦 Archive Outdated" ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  📦 ARCHIVE OUTDATED SEEDS                                     ║
+╚════════════════════════════════════════════════════════════════╝
+
+Archives only OUTDATED seeds (💤 tier).
+
+Fresh seeds (🌱 current session, 💭 recent) are kept.
+Only stale seeds past their TTL are archived.
+
+This is a safe cleanup operation:
+- Fresh seeds remain visible
+- Outdated seeds are hidden but preserved
+- No permanent deletion
+
+Use this regularly to keep your seed list manageable.
+EOF
+    exit 0
+fi
+
+# Enhance prompt (no emoji now)
+if [[ "$MENU_LINE" =~ ^"Enhance Prompt" ]]; then
+    cat <<'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  ✨ ENHANCE PROMPT                                             ║
+╚════════════════════════════════════════════════════════════════╝
+
+Runs a thought-agent to enhance your current prompt.
+
+The agent will analyze your prompt and suggest
+improvements for clarity, completeness, and
+effectiveness.
+
+Uses the current expansion mode (Interactive/Auto)
+and model settings (Sonnet/Haiku).
+EOF
+    exit 0
+fi
+
+# ============================================================================
+# SEED LINES - Show seed details
+# ============================================================================
+
+# Check if this is a seed line (any of the tier emojis)
+# See CC_SEED_EMOJI_PATTERN in cc-common.sh for emoji definitions
+if [[ ! "$MENU_LINE" =~ $CC_SEED_EMOJI_PATTERN ]]; then
+    # Unknown item - show nothing
+    exit 0
+fi
+
+# Extract command from menu line (format: "label<TAB>command")
+CMD=$(echo "$MENU_LINE" | cut -d$'\t' -f2)
+
+# Only process reflection expansion commands
+if [[ ! "$CMD" =~ ^cc-reflect-expand ]]; then
+    exit 0
+fi
+
+# Extract seed ID from command (format: "cc-reflect-expand mode seed-id")
+SEED_ID=$(echo "$CMD" | awk '{print $3}')
+
+if [ -z "$SEED_ID" ]; then
+    echo "Error: Could not extract seed ID" >&2
+    exit 1
+fi
+
+# Get seed JSON using state manager
+REFLECTION_BIN="$SCRIPT_DIR"
+SEED_JSON=$(cc_bun_run "$REFLECTION_BIN/../lib/reflection-state.ts" get "$SEED_ID" 2>/dev/null)
+
+if [ $? -ne 0 ] || [ -z "$SEED_JSON" ] || [ "$SEED_JSON" = "null" ]; then
+    echo "⚠️  Seed not found: $SEED_ID"
+    exit 0
+fi
+
+# Parse seed fields
+TITLE=$(echo "$SEED_JSON" | bun -e "const s = JSON.parse(await Bun.stdin.text()); console.log(s.title);" 2>/dev/null)
+RATIONALE=$(echo "$SEED_JSON" | bun -e "const s = JSON.parse(await Bun.stdin.text()); console.log(s.rationale);" 2>/dev/null)
+CREATED_AT=$(echo "$SEED_JSON" | bun -e "const s = JSON.parse(await Bun.stdin.text()); const d = new Date(s.created_at); console.log(d.toLocaleString());" 2>/dev/null)
+
+# Check for expansions
+EXPANSION_COUNT=$(echo "$SEED_JSON" | bun -e "const s = JSON.parse(await Bun.stdin.text()); console.log(s.expansions?.length || 0);" 2>/dev/null)
+
+# Format and display
+cat <<EOF
+╔════════════════════════════════════════════════════════════════╗
+║  📋 REFLECTION SEED DETAILS                                    ║
+╚════════════════════════════════════════════════════════════════╝
+
+📌 Title:
+   $TITLE
+
+🧠 Rationale:
+   $RATIONALE
+
+───────────────────────────────────────────────────────────────────
+⏰ Created: $CREATED_AT
+🆔 ID: $SEED_ID
+EOF
+
+# Show expansion history if present
+if [ "$EXPANSION_COUNT" -gt 0 ] 2>/dev/null; then
+    echo ""
+    echo "───────────────────────────────────────────────────────────────────"
+    echo "📜 EXPANSION HISTORY ($EXPANSION_COUNT)"
+    echo ""
+    echo "$SEED_JSON" | bun -e "
+        const s = JSON.parse(await Bun.stdin.text());
+        for (let i = 0; i < s.expansions.length; i++) {
+            const e = s.expansions[i];
+            const d = new Date(e.timestamp).toLocaleString();
+            console.log(\`  [\${i + 1}] \${d}\`);
+            console.log(\`      ✓ \${e.conclusion}\`);
+            if (e.result_path) {
+                console.log(\`      📄 \${e.result_path}\`);
+            }
+            console.log('');
+        }
+    " 2>/dev/null
+fi

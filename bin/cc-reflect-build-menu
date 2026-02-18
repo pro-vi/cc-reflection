@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+# cc-reflect-build-menu: Build menu for fzf (used for initial display and reload)
+# Usage: cc-reflect-build-menu FILE
+#
+# Outputs menu in "label<TAB>command" format
+
+set -e
+
+# Source shared utilities
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+source "$SCRIPT_DIR/../lib/menu-utils.sh"
+
+FILE="$1"
+SAFE_FILE=$(printf '%q' "$FILE")
+
+# Get current mode settings
+EXPANSION_MODE=$(cc_get_expansion_mode)
+PERMISSIONS_MODE=$(cc_get_permissions_mode)
+MODEL_SETTING=$(cc_get_model)
+FILTER_MODE=$(cc_get_menu_filter)
+CONTEXT_TURNS=$(cc_get_context_turns)
+
+# Get reflection seeds for current project (filtered by freshness)
+# WHY: Seeds are scoped to project directory (session ID = project hash)
+#      Freshness is time-based: 🌱 < 24h, 💭 24-72h, 💤 > 72h, 📦 archived
+SEEDS_JSON=""
+if command -v bun &>/dev/null; then
+    SEEDS_JSON=$(cc_bun_run "$SCRIPT_DIR/../lib/reflection-state.ts" list "$FILTER_MODE" 2>/dev/null || echo "[]")
+fi
+
+# Build and output menu
+cc_build_complete_menu "$SAFE_FILE" "$SEEDS_JSON" "$EXPANSION_MODE" "$PERMISSIONS_MODE" "$MODEL_SETTING" "$FILTER_MODE" "$CONTEXT_TURNS"

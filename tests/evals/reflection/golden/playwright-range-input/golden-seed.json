@@ -1,0 +1,13 @@
+{
+  "title": "E2E: Playwright range input requires evaluate not fill",
+  "examination": "third",
+  "category": "E2E",
+  "trigger": "When Playwright test fails with cryptic error on form inputs, especially 'Malformed value' on range/slider elements",
+  "signals": {
+    "error_pattern": "Malformed value",
+    "element_type": "input type=\"range\"",
+    "method_that_failed": ".fill()",
+    "solution": "evaluate() + dispatchEvent"
+  },
+  "anchor_file": "e2e/kick.spec.ts"
+}

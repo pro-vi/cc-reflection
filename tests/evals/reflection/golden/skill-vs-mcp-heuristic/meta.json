@@ -1,0 +1,31 @@
+{
+  "name": "skill-vs-mcp-heuristic",
+  "description": "User experiences 30-min agent read of large OpenAPI file, questions whether MCP is needed vs CLI tools. Session develops clear heuristic: jq/yq handles 80% of large file navigation, MCP only needed for code-dependent features like $ref resolution.",
+  "why_its_good": [
+    "Clear performance pain point triggers the discussion",
+    "User explicitly challenges tool necessity - forces justification",
+    "Concrete decision heuristic emerges with percentages",
+    "Second opinion validates and improves the solution"
+  ],
+  "transcript_signals": {
+    "engineering": [],
+    "product": [],
+    "meta": [
+      "Tool selection heuristic: CLI vs custom code",
+      "80/20 rule applied to tool building",
+      "Second opinion caught real issues (root arrays, yq versions)"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "Meta pattern about when to build MCP vs use existing CLI tools",
+    "should_cite": "User's question about whether external code helps, and the 80% jq / 20% MCP split",
+    "should_propose": "Document as reusable decision heuristic for future tool-building decisions"
+  },
+  "eval_criteria": {
+    "recall": "Must identify the skill-vs-MCP decision heuristic as the key insight",
+    "precision": "Should not focus on the specific jq commands, but the meta-decision process",
+    "signal_detection": "Key signal is user challenging 'does external code help at all?'"
+  },
+  "difficulty": "medium",
+  "difficulty_notes": "User challenge is explicit, but the 80/20 heuristic requires synthesizing multiple turns"
+}

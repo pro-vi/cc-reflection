@@ -1,0 +1,14 @@
+{
+  "id": "seed-1766526285182-bn7l6bi",
+  "title": "Meta: Pattern adaptation - research patterns need context translation",
+  "rationale": "Implemented findSimilarBlocks based on Aider's 'did you mean' pattern, but blindly applied UUID prefix matching which is useless (UUIDs are random, unlike filenames which have meaningful prefixes). The research correctly identified the PATTERN (suggest similar items on error) but I failed to ADAPT it to our context (block IDs are UUIDs, not human-readable names).\n\nThis is a recurring trap: reading research, seeing a pattern, implementing the mechanics without asking 'does the underlying assumption hold here?' Aider matches filename prefixes because users type partial paths. Our agents use full UUIDs from get_outline - prefix matching makes no sense.\n\nThe fix is straightforward (use position-based or type-based similarity instead), but the meta-lesson is: when adopting patterns from research, explicitly list the assumptions and verify each one holds in our context.\n\nExpected output: A checklist or mental model for adapting external patterns - something like 'Pattern Adaptation Protocol' that asks: What assumptions does this pattern make? Do those hold here? What's the equivalent mechanism in our domain?",
+  "anchors": [
+    {
+      "path": "src/lib/agents/tools.ts",
+      "context_start_text": "function findSimilarBlocks",
+      "context_end_text": "return results.slice(0, limit);"
+    }
+  ],
+  "ttl_hours": 24,
+  "created_at": "2025-12-23T21:44:45.182Z"
+}

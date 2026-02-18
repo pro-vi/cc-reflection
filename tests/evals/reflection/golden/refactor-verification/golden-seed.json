@@ -1,0 +1,12 @@
+{
+  "title": "Engineering: Refactor verification strategy - proving before/after equivalence",
+  "examination": "first",
+  "category": "Engineering",
+  "trigger": "When user asks 'how do you verify' or 'how do you know' after a refactor is proposed, especially when assistant assumed equivalence without evidence",
+  "signals": {
+    "user_challenge": "How do you verify that the after and before is the same?",
+    "implicit_gap": "Question reveals missing verification strategy",
+    "assumption_exposed": "Assistant assumed refactors are equivalent without evidence"
+  },
+  "anchor_file": "~/.claude/skills/refactor/SKILL.md"
+}

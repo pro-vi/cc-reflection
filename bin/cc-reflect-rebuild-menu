@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# cc-reflect-rebuild-menu - Rebuild fzf menu with current mode
+# WHY: Supports dynamic menu updates when mode is toggled
+# USES: cc_build_complete_menu (tested in tests/unit/test_menu_utils.bats)
+#
+# Usage: cc-reflect-rebuild-menu <file-path>
+# Output: Display menu (labels only, for fzf)
+
+set -euo pipefail
+
+# Get script directory for sourcing libraries
+# WHY: Handle both symlinked and direct execution
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+source "$SCRIPT_DIR/../lib/menu-utils.sh"
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+# Get file path from argument
+FILE="${1:-}"
+if [ -z "$FILE" ]; then
+    cc_log_error "Missing file path argument"
+    exit 1
+fi
+
+# Build full menu using the shared builder (single source of truth)
+# NOTE: This script exists primarily to output labels-only for fzf.
+FULL_MENU=$("$SCRIPT_DIR/cc-reflect-build-menu" "$FILE")
+cc_prepare_menu_display "$FULL_MENU"

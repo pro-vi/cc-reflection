@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+# cc-reflect-delete-seed: Delete a seed from fzf keybinding
+# Usage: cc-reflect-delete-seed "menu_line"
+#
+# Takes a menu line in format "💭 Title<TAB>cc-reflect-expand mode seed-id"
+# and deletes the seed after confirmation
+
+set -e
+
+# Source shared utilities
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+source "$SCRIPT_DIR/../lib/cc-common.sh"
+
+MENU_LINE="$1"
+
+# Only process seed lines (any of the tier emojis)
+# See CC_SEED_EMOJI_PATTERN in cc-common.sh for emoji definitions
+if [[ ! "$MENU_LINE" =~ $CC_SEED_EMOJI_PATTERN ]]; then
+    echo "Not a seed line" >&2
+    exit 1
+fi
+
+# Extract command from menu line
+CMD=$(echo "$MENU_LINE" | cut -d$'\t' -f2)
+
+# Extract seed ID from command
+SEED_ID=$(echo "$CMD" | awk '{print $3}')
+
+if [ -z "$SEED_ID" ]; then
+    echo "Error: Could not extract seed ID" >&2
+    exit 1
+fi
+
+# Get seed title for confirmation
+REFLECTION_BIN="$SCRIPT_DIR"
+SEED_JSON=$(cc_bun_run "$REFLECTION_BIN/../lib/reflection-state.ts" get "$SEED_ID" 2>/dev/null)
+
+if [ -z "$SEED_JSON" ] || [ "$SEED_JSON" = "null" ]; then
+    echo "Seed not found: $SEED_ID" >&2
+    exit 1
+fi
+
+TITLE=$(echo "$SEED_JSON" | bun -e "const s = JSON.parse(await Bun.stdin.text()); console.log(s.title);" 2>/dev/null)
+
+# Confirmation prompt (output to /dev/tty to bypass fzf)
+echo "" >/dev/tty
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >/dev/tty
+echo "🗑️  DELETE SEED" >/dev/tty
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >/dev/tty
+echo "" >/dev/tty
+echo "Title: $TITLE" >/dev/tty
+echo "ID: $SEED_ID" >/dev/tty
+echo "" >/dev/tty
+echo -n "Delete this seed? [y/N]: " >/dev/tty
+read -r confirmation </dev/tty
+
+if [ "$confirmation" != "y" ] && [ "$confirmation" != "Y" ]; then
+    echo "Cancelled." >/dev/tty
+    exit 0
+fi
+
+# Delete the seed
+cc_bun_run "$REFLECTION_BIN/../lib/reflection-state.ts" delete "$SEED_ID" >/dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "✓ Seed deleted" >/dev/tty
+    cc_log_info "Deleted seed: $SEED_ID"
+else
+    echo "✗ Failed to delete seed" >/dev/tty
+    cc_log_error "Failed to delete seed: $SEED_ID"
+    exit 1
+fi

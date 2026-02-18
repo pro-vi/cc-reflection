@@ -1,0 +1,13 @@
+{
+  "title": "Testing as design constraint discovery: delimiter mismatch",
+  "examination": "first",
+  "category": "engineering",
+  "trigger": "When user reports feature doesn't work but logs show success, suggesting contract mismatch",
+  "signals": {
+    "user_report": "Archive and delete doesn't seem to work in the menu",
+    "root_cause": "Different delimiters used in different parts of code (pipe vs tab)",
+    "coverage_gap": "No tests for cc-reflect-delete-seed or cc-reflect-archive-seed",
+    "test_expansion": "24 regression tests added, suite expanded 330→354"
+  },
+  "anchor_file": "lib/menu-utils.sh"
+}

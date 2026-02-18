@@ -1,0 +1,14 @@
+{
+  "title": "User intervention signals overengineering",
+  "examination": "third",
+  "category": "meta",
+  "trigger": "When user interrupts mid-task with 'too many', 'stop', 'wait' or rejects tool use, signaling Claude is overcomplicating",
+  "signals": {
+    "interruption": "[Request interrupted by user]",
+    "rejection": "The user doesn't want to proceed with this tool use",
+    "feedback": "too many",
+    "simplification_request": "i never used them earlier"
+  },
+  "anchor_file": null,
+  "is_negative_test": false
+}

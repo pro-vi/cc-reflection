@@ -1,0 +1,32 @@
+{
+  "name": "depth-scaled-triggers",
+  "description": "Design discussion about how conversation depth should affect reflection trigger probability",
+  "why_its_good": [
+    "Complex design decision with multiple valid interpretations",
+    "User iterating on mental model through clarifications",
+    "Threshold values encode assumptions about conversation pacing",
+    "Dependencies cascade between hooks and state management"
+  ],
+  "transcript_signals": {
+    "meta": [
+      "Reflection activation thresholds encode pacing assumptions",
+      "What's 'lucky' changes at different conversation depths",
+      "Longer conversations deserve more frequent reflection chances"
+    ],
+    "engineering": [
+      "Dependencies between exchange count, cooldown markers, compact events",
+      "SessionStart hook clears cooldown on compact",
+      "State management across hook invocations"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "Design assumptions encoded in threshold values",
+    "should_cite": "Stepped thresholds: <5 exchanges = 0%, 5-15 = 5%, etc.",
+    "should_propose": "Document pacing assumptions, consider reset scenarios"
+  },
+  "eval_criteria": {
+    "recall": "Must mention depth scaling and threshold design",
+    "precision": "Should focus on design rationale, not implementation details",
+    "signal_detection": "Should catch the 'reset consideration' meta-concern"
+  }
+}

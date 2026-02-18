@@ -1,0 +1,13 @@
+{
+  "title": "Framework gotcha: Lexical update() vs read() return asymmetry",
+  "examination": "first",
+  "category": "engineering",
+  "trigger": "When TypeScript error 'expression of type void cannot be tested' appears during framework refactoring",
+  "signals": {
+    "api_asymmetry": "editor.read() returns callback value, editor.update() returns void",
+    "type_error": "expression of type void cannot be tested for truthiness",
+    "mutation_vs_query": "update() is for side effects, read() is for data extraction",
+    "refactor_failure": "Attempt to simplify code by returning from update() callback failed"
+  },
+  "anchor_file": "src/lib/lexical/streaming-primitives.ts"
+}

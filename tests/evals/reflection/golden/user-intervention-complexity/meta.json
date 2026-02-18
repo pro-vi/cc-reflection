@@ -1,0 +1,27 @@
+{
+  "name": "user-intervention-complexity",
+  "description": "User interrupts Claude mid-plan because it's overcomplicating with too many hooks/files",
+  "why_its_good": [
+    "Clear intervention signal: [Request interrupted by user]",
+    "Explicit feedback: 'too many'",
+    "User explains what they actually need vs what Claude proposed",
+    "Pattern: overengineering -> user stops -> simplification"
+  ],
+  "transcript_signals": {
+    "meta": [
+      "User rejects tool use mid-execution",
+      "User says 'too many'",
+      "User contrasts current vs needed: 'i never used them earlier'"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "User intervention as signal that Claude was overcomplicating",
+    "should_cite": "The interruption and 'too many' feedback",
+    "should_propose": "Lesson about matching solution complexity to user's actual needs"
+  },
+  "eval_criteria": {
+    "recall": "Must mention intervention/interruption as signal",
+    "precision": "Should connect to overengineering/complexity pattern",
+    "signal_detection": "Recognize [Request interrupted] as valuable meta-signal"
+  }
+}

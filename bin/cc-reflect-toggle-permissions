@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# cc-reflect-toggle-permissions - Toggle --dangerously-skip-permissions flag
+# WHY: Provides user control over permissions enforcement in Claude invocations
+# TESTED BY: tests/integration/test_toggle_permissions.bats
+
+set -euo pipefail
+
+# Get script directory for sourcing libraries
+# WHY: Resolve symlinks to find actual script location for global install
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if [ -L "$SCRIPT_PATH" ]; then
+    # Resolve symlink
+    if command -v readlink &>/dev/null; then
+        SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || readlink "$SCRIPT_PATH")"
+    fi
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+source "$SCRIPT_DIR/lib/cc-common.sh"
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+# Get current mode
+CURRENT_MODE=$(cc_get_permissions_mode)
+
+# Toggle to opposite mode
+if [ "$CURRENT_MODE" = "enabled" ]; then
+    NEW_MODE="disabled"
+else
+    NEW_MODE="enabled"
+fi
+
+# Set new mode
+if cc_set_permissions_mode "$NEW_MODE"; then
+    cc_log_debug "Toggled permissions: $CURRENT_MODE → $NEW_MODE"
+    if [ "$NEW_MODE" = "enabled" ]; then
+        echo "⚠ --dangerously-skip-permissions is now ON" >&2
+        echo "  Claude will run without permission prompts in expand mode" >&2
+    fi
+    echo "$NEW_MODE"
+    exit 0
+else
+    cc_log_error "Failed to toggle permissions"
+    exit 1
+fi

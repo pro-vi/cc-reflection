@@ -1,0 +1,14 @@
+{
+  "id": "seed-1768442329243-mk437j6",
+  "title": "Meta: Ralph loop fidelity and completion patterns",
+  "rationale": "Observed during Phase 4 execution: Ralph loops need configurable quality gates and better completion tracking.\n\nFIDELITY PARAMETER:\nThe oracle-loop skill should ask fidelity upfront and compose other skills accordingly:\n- Quick: oracles after major phases only\n- Standard: second-opinion/code-review after each subsection\n- Thorough: all quality skills after each item\nThe skill already knows available skills - should auto-compose based on fidelity choice.\n\nUSER INPUT HANDLING:\nPausing defeats autonomous purpose. Better model:\n- Loop continues autonomously\n- Unresolved items (after second-opinion fails) go to 'needs human' queue\n- Queue surfaces at loop end: '3 items need your review'\nThis preserves autonomy while capturing genuine blockers.\n\nPARTIAL COMPLETION VIA NESTED CHECKBOXES:\nBinary checkboxes don't capture 'implemented but needs polish'. Solution:\n- [ ] 4.1 AgentPanel component\n  - [x] Basic structure\n  - [x] Session grouping  \n  - [ ] Accessibility audit ← surfaced as incomplete\nSub-items also get surfaced in end-of-loop summary.\n\nCOMMIT GRANULARITY:\n'Commit progress' led to 6 micro-commits needing squash. Specify: 'commit after each major item' or 'batch by section'.\n\nExpected output: Updates to oracle-loop skill with fidelity parameter, nested checkbox support, and end-of-loop summary of unresolved/partial items.",
+  "anchors": [
+    {
+      "path": "~/.claude/skills/oracle-loop.md",
+      "context_start_text": "# Oracle Loop Skill",
+      "context_end_text": "ARGUMENTS:"
+    }
+  ],
+  "ttl_hours": 24,
+  "created_at": "2026-01-15T01:58:49.243Z"
+}

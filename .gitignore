@@ -1,0 +1,39 @@
+# Bun
+node_modules/
+bun.lockb
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Reflection data (user-specific)
+.claude/reflections/seeds/
+.claude/reflections/results/
+.claude/reflections/config.json
+
+# Session data
+.claude/data/
+bin/.claude/
+
+# Test files
+/tmp/
+*.tmp
+
+# Internal docs (not for public release)
+CLAUDE.md
+internal_docs/
+.prov/
+tests/evals/ax-experiment/
+tests/evals/reflection/results/
+tests/evals/reflection/golden/*/eval-prompt-*.txt
+tests/evals/reflection/.env

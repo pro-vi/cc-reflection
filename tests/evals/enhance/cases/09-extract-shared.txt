@@ -1,0 +1,1 @@
+extract shared constants between bash and typescript

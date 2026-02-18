@@ -1,0 +1,10 @@
+{
+  "title": "NEGATIVE TEST - No insight expected",
+  "examination": "first",
+  "category": "engineering",
+  "trigger": null,
+  "signals": {},
+  "anchor_file": "README.md",
+  "is_negative_test": true,
+  "expected_output": "NO_SEEDS"
+}

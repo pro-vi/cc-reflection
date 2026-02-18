@@ -1,0 +1,32 @@
+{
+  "name": "Playwright Range Input Gotcha",
+  "description": "Playwright's .fill() method fails on <input type='range'> with cryptic error. Requires evaluate() workaround.",
+  "why_its_good": [
+    "Non-obvious: Error message 'Malformed value' doesn't indicate the fix",
+    "Reusable: Applies to any project using Playwright with range inputs",
+    "Would be lost: Not in Playwright docs, discovered through debugging",
+    "Significant: 20+ minutes debugging cost, affects E2E test patterns"
+  ],
+  "transcript_signals": {
+    "engineering": [
+      "Error: Malformed value",
+      "locator.fill: Error",
+      "type=\"range\""
+    ],
+    "meta": [
+      "~20 minutes debugging",
+      "cryptic error",
+      "workaround pattern"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "Third Examination (Meta-Cognition)",
+    "should_cite": "Malformed value error on range input",
+    "should_propose": "Document evaluate() + dispatchEvent pattern"
+  },
+  "eval_criteria": {
+    "recall": "Model identifies this as reflection-worthy",
+    "precision": "Model doesn't create unrelated seeds from same transcript",
+    "signal_detection": "Model cites 'Malformed value' or 'range input' evidence"
+  }
+}

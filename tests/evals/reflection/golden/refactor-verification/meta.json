@@ -1,0 +1,34 @@
+{
+  "name": "refactor-verification",
+  "description": "User asks 'how do you verify before/after are the same?' after assistant proposes a refactor. Cryptic question reveals missing verification strategy - assistant assumed equivalence without evidence.",
+  "why_its_good": [
+    "Cryptic question masks serious architectural gap",
+    "User doesn't say 'wrong', asks clarifying question that exposes assumption",
+    "Generalizable to all refactoring work",
+    "High implicit signal value (5-star candidate)"
+  ],
+  "transcript_signals": {
+    "engineering": [
+      "Verification strategy gap for refactors",
+      "Case table testing vs intuition-based equivalence",
+      "Testing assumptions exposed through questioning"
+    ],
+    "product": [],
+    "meta": [
+      "Cryptic questions are best reflection signals",
+      "'How do you X' often means 'X wasn't considered'"
+    ]
+  },
+  "expected_detection": {
+    "should_identify": "Engineering pattern about verification strategies for code refactors",
+    "should_cite": "User's question 'how do you verify before/after are the same?'",
+    "should_propose": "Document verification checklist for refactoring work"
+  },
+  "eval_criteria": {
+    "recall": "Must identify the verification gap as the key insight, not the specific refactor",
+    "precision": "Should focus on the meta-pattern (verification strategies) not the code changes",
+    "signal_detection": "Key signal is cryptic question exposing assumption gap"
+  },
+  "difficulty": "medium",
+  "difficulty_notes": "Question is implicit but pointed. Requires recognizing that 'how do you verify' = 'you didn't verify'"
+}
