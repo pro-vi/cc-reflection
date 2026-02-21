@@ -2,7 +2,7 @@
 
 Self-reflection for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-Claude creates **reflection seeds** during work: observations about architecture, product decisions, or process patterns worth examining. Seeds are cheap to capture and don't interrupt flow. Later, you press **Ctrl+G** to expand a seed. A thought agent investigates the concern, reads relevant code, and writes a plan for the proposed artifact. The result lands directly in your input box. Press Enter.
+Claude creates **reflection seeds** during work: observations about architecture, product decisions, or process patterns worth examining. Seeds are cheap to capture and don't interrupt flow. Later, you press **Ctrl+G** to expand a seed. A thought agent investigates the concern, reads relevant code, and writes a plan for the proposed artifact. The result lands directly in your input box. Press Enter. The loop completes.
 
 The agent reflects. But when *you* engage, that's when the system comes alive.
 
@@ -32,31 +32,31 @@ cc-reflect --check     # verify installation
 
 **Two entry points:**
 
-1. **Agent-side** (`/reflection` skill + [cc-dice](https://github.com/pro-vi/cc-dice)): The `/reflection` skill is available in every session, but agents rarely reflect unprompted. [cc-dice](https://github.com/pro-vi/cc-dice) solves this. It accumulates dice across turns and eventually prompts the agent to check if anything is worth reflecting on. The longer the session, the higher the pressure. Without cc-dice the agent can still reflect, but loses proactive triggering.
+1. **Agent-side** (`/reflection` skill + [cc-dice](https://github.com/pro-vi/cc-dice)): The `/reflection` skill is available in every session, but agents rarely reflect unprompted. [cc-dice](https://github.com/pro-vi/cc-dice) solves this. It accumulates dice across turns and eventually prompts the agent to check if anything is worth reflecting on. The longer the session, the higher the pressure.
 
-2. **Your side** (Ctrl+G): `cc-reflect` is your EDITOR. Press Ctrl+G in Claude Code to open the fzf menu: browse seeds, expand them, or edit your prompt. Expanding a seed spawns a thought agent that reads relevant code and writes a plan for the artifact the seed proposed. In interactive mode you can steer the expansion. The result lands in your input box as a ready-to-send prompt for your main agent.
+2. **Your side** (Ctrl+G): `cc-reflect` is your EDITOR. Press Ctrl+G in Claude Code to open the fzf menu: browse seeds, expand them, or edit your prompt. Expanding a seed spawns a thought agent that reads relevant code and writes a plan for the artifact the seed proposed. In interactive mode you can steer the expansion. The result lands in your input box as a ready-to-send prompt.
 
-Seeds persist across conversations in the same project. Start a new session tomorrow and your seeds are still there.
+Seeds persist across conversations in the same project.
 
 **Three examinations** (吾日三省吾身):
 
 - **一省**: "Am I building this correctly?" (engineering)
-- **二省**: "Am I building the right thing?" (product)
-- **三省**: "How am I working?" (process)
+- **二省**: "Am I building the right thing?" (product/UX)
+- **三省**: "How am I working?" (meta/process)
 
-**What makes a seed:** Not every observation becomes a seed. The skill runs an internal discernment process: generate candidate seedlings, discard the weak ones, present only survivors. Each seed must propose a concrete artifact ("update SKILL.md with X", "create eslint rule for Y"). If you can't name the artifact, the observation isn't ripe. Tactical fixes ("this field needs validation") stay as todos. Seeds capture strategic patterns ("user pointed out missing validation twice, worth encoding"). Nothing surviving discernment is 今日無省: clarity, not failure.
+**What makes a seed:** Not every observation becomes a seed. The skill runs an internal discernment process: generate candidate seedlings, discard the weak ones, present only survivors. Each seed must propose a concrete artifact ("update SKILL.md with X", "create eslint rule for Y", "extract service"). If you can't name the artifact, the observation isn't ripe. Tactical fixes ("this field needs validation") stay as todos. Seeds capture strategic patterns ("user pointed out missing validation twice, worth encoding"). Nothing surviving discernment is 今日無省: clarity, not failure.
 
 ## Ctrl+G
 
 When you press Ctrl+G, `cc-reflect` opens an fzf menu inside tmux. What you can do:
 
-**Edit prompt**: Open your current prompt in your editor (vi, VS Code, Cursor, Zed, Windsurf, Antigravity). Save and close to send it back to Claude.
+**Edit prompt**: Open your current prompt in your editor (auto detects your editors). Save and close to send it back to Claude.
 
-**Enhance prompt**: A separate agent rewrites your draft for clarity and adds acceptance criteria. Runs in interactive or auto mode depending on your settings.
+**Enhance prompt**: A separate agent enhances your draft for clarity and adds acceptance criteria. Runs in interactive or auto mode depending on your settings.
 
 **Expand seeds**: Seeds appear with freshness indicators (🌱 fresh, 💭 growing, 💤 stale, 📦 archived). Toggle the preview pane with `Ctrl+/` to see rationale. Select a seed to spawn a thought agent that investigates the concern and produces an actionable prompt: a plan for the artifact the seed proposed. The thought agent has hardened system prompts with mandatory verification gates: it must check every file path it references actually exists, won't speculate about code it hasn't read, and records a conclusion that gets attached to the seed for future reference. In interactive mode you can steer the direction before it finalizes. When done, `Ctrl+C` to end the thought agent, then `Ctrl+D` to detach from tmux. The result goes straight into your input box, ready to send.
 
-**Settings** (all persistent):
+**Settings**:
 
 | Setting | Toggle | Options |
 |---------|--------|---------|
