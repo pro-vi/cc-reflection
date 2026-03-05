@@ -181,6 +181,18 @@ install_global() {
         print_warning "CC_REFLECTION_SESSION_ID won't be available until manually registered"
     fi
 
+    # Register as cc-hall module (if cc-hall is available)
+    if command -v cc-hall &>/dev/null; then
+        cc-hall module link "$SCRIPT_DIR/hall-module" --name reflection
+        print_success "Registered reflection module with cc-hall"
+    else
+        # Fallback: manual symlink
+        local hall_modules="${HOME}/.claude/hall/modules"
+        mkdir -p "$hall_modules"
+        ln -sf "$SCRIPT_DIR/hall-module" "$hall_modules/reflection"
+        print_success "Symlinked reflection module to $hall_modules/reflection"
+    fi
+
     # Create default config if not exists
     if [ ! -f "$REFLECTION_BASE/config.json" ]; then
         # Initialize with bun to create default config

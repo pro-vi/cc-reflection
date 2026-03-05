@@ -22,6 +22,10 @@ source "$SCRIPT_DIR/../lib/cc-common.sh"
 source "$SCRIPT_DIR/../lib/validators.sh"
 source "$SCRIPT_DIR/../lib/prompt-builder.sh"
 
+# Detect cc-hall availability (binary in PATH = module API surface)
+_HAS_CC_HALL=false
+command -v cc-hall &>/dev/null && _HAS_CC_HALL=true
+
 MODE="$1" # "interactive" or "auto"
 SEED_ID="$2"
 PROMPT_FILE="$3"
@@ -116,7 +120,6 @@ if [ "$MODE" = "interactive" ]; then
 
     # Build system prompt using modular builder and save to temp file
     SYSTEM_PROMPT_FILE=$(cc_mktemp "system-prompt-$SEED_ID")
-    cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
 
     # Generate prompt with seed context
     cat >"$SYSTEM_PROMPT_FILE" <<PROMPT_EOF
@@ -128,32 +131,37 @@ $SEED_JSON
 \`\`\`
 PROMPT_EOF
 
-    # Validate tmux environment
-    if cc_in_tmux; then
-        cc_log_debug "Running in tmux environment"
-
-        # Check if we have ORIGINAL_TMUX from cc-reflect
-        if [ -n "${ORIGINAL_TMUX}" ] && cc_validate_tmux_session "$ORIGINAL_TMUX"; then
-            cc_log_debug "Using ORIGINAL_TMUX: $ORIGINAL_TMUX"
-            TMUX="$ORIGINAL_TMUX" tmux new-window -n "reflect:${SEED_ID:0:8}"
-            # Send command with system prompt, then auto-execute
-            TMUX="$ORIGINAL_TMUX" tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
-            # Wait for Claude to start, then prefill input with starter prompt
-            sleep 1
-            TMUX="$ORIGINAL_TMUX" tmux send-keys "Begin investigation"
-        else
-            cc_log_debug "Using current TMUX session"
-            tmux new-window -n "reflect:${SEED_ID:0:8}"
-            # Send command with system prompt, then auto-execute
-            tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
-            # Wait for Claude to start, then prefill input with starter prompt
-            sleep 1
-            tmux send-keys "Begin investigation"
-        fi
+    if [ "$_HAS_CC_HALL" = true ]; then
+        cc-hall agent --mode interactive \
+            --system-prompt-file "$SYSTEM_PROMPT_FILE" \
+            --model "$(cc_get_model)" \
+            $([ "$(cc_get_permissions_mode)" = "enabled" ] && echo "--skip-permissions") \
+            --window-name "reflect:${SEED_ID:0:8}" \
+            --message "Begin investigation" \
+            --cleanup "$SYSTEM_PROMPT_FILE"
     else
-        cc_log_error "Not in tmux environment - cannot spawn interactive window"
-        echo "Error: Interactive mode requires tmux" >&2
-        exit 1
+        # Standalone path: original tmux logic
+        cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
+        if cc_in_tmux; then
+            cc_log_debug "Running in tmux environment"
+            if [ -n "${ORIGINAL_TMUX}" ] && cc_validate_tmux_session "$ORIGINAL_TMUX"; then
+                cc_log_debug "Using ORIGINAL_TMUX: $ORIGINAL_TMUX"
+                TMUX="$ORIGINAL_TMUX" tmux new-window -n "reflect:${SEED_ID:0:8}"
+                TMUX="$ORIGINAL_TMUX" tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+                sleep 1
+                TMUX="$ORIGINAL_TMUX" tmux send-keys "Begin investigation"
+            else
+                cc_log_debug "Using current TMUX session"
+                tmux new-window -n "reflect:${SEED_ID:0:8}"
+                tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+                sleep 1
+                tmux send-keys "Begin investigation"
+            fi
+        else
+            cc_log_error "Not in tmux environment - cannot spawn interactive window"
+            echo "Error: Interactive mode requires tmux" >&2
+            exit 1
+        fi
     fi
 
     echo "" >/dev/tty
@@ -165,13 +173,11 @@ PROMPT_EOF
     sleep 1
 
 else
-    # Auto mode - spawn tmux window with auto-submit (use current TMUX only)
-    # Simpler than interactive: just use current tmux, auto-submit immediately
+    # Auto mode - spawn tmux window with auto-submit
     cc_log_info "Spawning auto thought-agent in new tmux window"
 
     # Save system prompt to temp file
     SYSTEM_PROMPT_FILE=$(cc_mktemp "system-prompt-$SEED_ID")
-    cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
 
     # Build system prompt using modular builder
     cat >"$SYSTEM_PROMPT_FILE" <<PROMPT_EOF
@@ -183,16 +189,25 @@ $SEED_JSON
 \`\`\`
 PROMPT_EOF
 
-    # Spawn in current tmux (simpler than interactive's dual-branch approach)
-    if cc_in_tmux; then
-        cc_log_debug "Spawning in current tmux session"
-        tmux new-window -n "reflect:${SEED_ID:0:8}"
-        # Use -p flag to auto-execute (no input box, runs immediately)
-        tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' -p "Begin investigation" --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+    if [ "$_HAS_CC_HALL" = true ]; then
+        cc-hall agent --mode auto \
+            --system-prompt-file "$SYSTEM_PROMPT_FILE" \
+            --prompt "Begin investigation" \
+            --model "$(cc_get_model)" \
+            $([ "$(cc_get_permissions_mode)" = "enabled" ] && echo "--skip-permissions") \
+            --window-name "reflect:${SEED_ID:0:8}" \
+            --cleanup "$SYSTEM_PROMPT_FILE"
     else
-        cc_log_error "Not in tmux environment - auto mode requires tmux"
-        echo "Error: Auto mode requires tmux for tool access and visibility" >&2
-        exit 1
+        cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
+        if cc_in_tmux; then
+            cc_log_debug "Spawning in current tmux session"
+            tmux new-window -n "reflect:${SEED_ID:0:8}"
+            tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' -p "Begin investigation" --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
+        else
+            cc_log_error "Not in tmux environment - auto mode requires tmux"
+            echo "Error: Auto mode requires tmux for tool access and visibility" >&2
+            exit 1
+        fi
     fi
 
     echo "" >/dev/tty

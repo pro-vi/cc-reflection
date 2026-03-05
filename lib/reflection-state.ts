@@ -939,6 +939,18 @@ if (import.meta.main) {
       break
     }
 
+    case "list-menu-entries": {
+      const filter = (args[1] || "active") as MenuFilter
+      const mode = args[2] || "interactive"
+      const seeds = manager.listSeeds(filter)
+      for (const seed of seeds) {
+        const emoji = seed.freshness_tier || '\u{1F4AD}'
+        const expanded = seed.expansions && seed.expansions.length > 0 ? ' \u2713' : ''
+        console.log(`${emoji} ${seed.title}${expanded}\tcc-reflect-expand ${mode} ${seed.id}`)
+      }
+      break
+    }
+
     default:
       console.error(`Unknown command: ${command}`)
       console.log("Usage:")
@@ -954,6 +966,7 @@ if (import.meta.main) {
       console.log("  cleanup")
       console.log("  write-result <seedId> <expanded-prompt>")
       console.log("  read-result <seedId>")
+      console.log("  list-menu-entries [filter] [mode]")
       console.log("  get-mode")
       console.log("  set-mode <interactive|auto>")
       console.log("  get-permissions")

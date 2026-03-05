@@ -60,7 +60,13 @@ Options:
 
 ## Dark Matter
 
-**Dark matter** = context that's present in your session but practically lost in any handoff: failed attempts, error messages, hesitations, rejected approaches, corrections. It's not hidden state — it's context that carries disproportionate weight because you experienced it, and would be flattened in any summary or delegation.
+**Dark matter** = context that's present in your session but practically lost in any handoff. It carries disproportionate weight because you experienced it, and would be flattened in any summary or delegation.
+
+Dark matter is not a negative gate. It includes:
+- **Friction**: failed attempts, error messages, hesitations, rejected approaches, corrections
+- **Flow**: workflows that clicked, patterns that emerged naturally, approaches that worked surprisingly well but aren't encoded anywhere
+
+The test: *would this be lost if I handed off right now?* A failure nobody documented is dark matter. A workflow that worked perfectly but lives only in this session's muscle memory is equally dark matter.
 
 Reflect from what you experienced, not what you'd read in a transcript.
 
@@ -81,13 +87,13 @@ Use a thinking block to generate and filter seedlings. This keeps the deliberati
 ```
 <thinking>
 Seedling 1: [observation]
-  → Rooted in dark matter I felt? [yes/no]
+  → Rooted in dark matter (friction or flow) I felt? [yes/no]
 
 Seedling 2 (optional): [observation]
-  → Rooted in dark matter I felt? [yes/no]
+  → Rooted in dark matter (friction or flow) I felt? [yes/no]
 
 Seedling 3 (optional): [observation]
-  → Rooted in dark matter I felt? [yes/no]
+  → Rooted in dark matter (friction or flow) I felt? [yes/no]
 
 Discard: [which and why]
 Seed: [which seedling ripened, or "none"]
@@ -98,7 +104,7 @@ Discard seedlings that:
 - Merely restate what is already known
 - Describe a bug that was just fixed
 - Cannot trace a path to meaningful change
-- Are not rooted in dark matter (hesitations, failures, corrections you experienced)
+- Are not rooted in dark matter (friction or flow you experienced)
 
 If no seedling ripens into a seed: proceed to Step 2B (今日無省). This is not failure.
 
@@ -146,12 +152,22 @@ Process, learnable conventions, tool/hook opportunities.
 ### Dark Matter Signals (You Felt These)
 
 Leverage what you experienced, not just what was said:
+
+**Friction (something resisted):**
 - Tool failed multiple times before succeeding
 - You considered alternative approaches but rejected them
 - User corrected your direction mid-task
 - Something took longer than it "should have"
 - You made an assumption that almost broke things
-- User's tone shifted (frustration, confusion, relief)
+- User's tone shifted (frustration, confusion)
+
+**Flow (something clicked):**
+- A workflow fell into place that isn't documented anywhere
+- You discovered a pattern that made subsequent steps trivial
+- A tool/technique combination worked surprisingly well
+- User's tone shifted (relief, excitement, "yes exactly")
+- Something that should have been hard was easy — why?
+- An approach emerged that would be repeatable but isn't encoded
 
 ### Creating Seeds
 
@@ -306,6 +322,13 @@ Standard approach failed 2+ times, forcing creative solution.
 User keeps correcting direction (not just typos).
 - Multiple "no", "not that", "try X instead"
 - Signals: Claude missing user's intent or constraints
+
+**6. Unencoded Success**
+Something worked well but the pattern lives only in this session.
+- A workflow emerged that would save time if repeatable
+- A technique or combination clicked that isn't in any docs/skills
+- User said "yes, exactly" or "this is great" — what made it work?
+- Signals: tacit knowledge that should become explicit
 
 ---
 
