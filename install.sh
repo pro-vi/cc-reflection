@@ -96,11 +96,12 @@ check_dependencies() {
         done
         echo ""
         echo "Install missing dependencies:"
-        echo "  git:   https://git-scm.com/downloads"
-        echo "  bun:   curl -fsSL https://bun.sh/install | bash"
-        echo "  fzf:   brew install fzf  (or apt-get install fzf)"
-        echo "  tmux:  brew install tmux (or apt-get install tmux)"
-        echo "  jq:    brew install jq   (or apt-get install jq)"
+        echo "  cc-hall: https://github.com/pro-vi/cc-hall"
+        echo "  git:    https://git-scm.com/downloads"
+        echo "  bun:    curl -fsSL https://bun.sh/install | bash"
+        echo "  fzf:    brew install fzf  (or apt-get install fzf)"
+        echo "  tmux:   brew install tmux (or apt-get install tmux)"
+        echo "  jq:     brew install jq   (or apt-get install jq)"
         echo "  claude: See https://docs.claude.com/en/docs/claude-code"
         echo ""
         return 1
