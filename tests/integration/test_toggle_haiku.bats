@@ -101,20 +101,16 @@ teardown() {
     done
 }
 
-@test "cc_get_model_flag returns correct flag" {
-    # Opus: explicit flag
+@test "cc_get_model returns correct model name" {
     bun "$BATS_TEST_DIRNAME/../../lib/reflection-state.ts" set-model opus > /dev/null
-    flag=$(cc_get_model_flag)
-    assert_equal "$flag" "--model opus"
+    model=$(cc_get_model)
+    assert_equal "$model" "opus"
 
-    # Sonnet: empty (CLI default)
     bun "$BATS_TEST_DIRNAME/../../lib/reflection-state.ts" set-model sonnet > /dev/null
-    flag=$(cc_get_model_flag)
-    assert_equal "$flag" ""
+    model=$(cc_get_model)
+    assert_equal "$model" "sonnet"
 
-    # Haiku: explicit flag
     bun "$BATS_TEST_DIRNAME/../../lib/reflection-state.ts" set-model haiku > /dev/null
-    flag=$(cc_get_model_flag)
-    assert_equal "$flag" "--model haiku"
-
+    model=$(cc_get_model)
+    assert_equal "$model" "haiku"
 }

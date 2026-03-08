@@ -5,7 +5,7 @@
 # WHY: Make cc-common.sh self-sufficient for finding reflection-state.ts
 CC_LIB_DIR="${CC_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
-# Base directory for reflection state (kept in sync with bin/cc-reflect scripts)
+# Base directory for reflection state
 REFLECTION_BASE="${REFLECTION_BASE:-${HOME}/.claude/reflections}"
 
 # ============================================================================
@@ -51,74 +51,6 @@ cc_log_debug() { cc_log DEBUG "$@"; }
 # SYNC: Must match FreshnessTier type in lib/reflection-state.ts:31
 # Used by: cc-reflect-delete-seed, cc-reflect-archive-seed, cc-reflect-preview-seed
 CC_SEED_EMOJI_PATTERN='^(🌱|💭|💤|📦)'
-
-# ============================================================================
-# NERD FONT DETECTION
-# ============================================================================
-
-# Check if Nerd Fonts are available
-# WHY: Nerd Fonts provide beautiful editor-specific icons
-# RETURNS: 0 if Nerd Fonts available, 1 otherwise
-# CACHE: Result cached in CC_HAS_NERD_FONTS variable
-cc_has_nerd_fonts() {
-    # Return cached result if available
-    if [ -n "$CC_HAS_NERD_FONTS" ]; then
-        [ "$CC_HAS_NERD_FONTS" = "1" ] && return 0 || return 1
-    fi
-
-    # Check for Nerd Fonts using fc-list
-    if command -v fc-list &>/dev/null; then
-        if fc-list 2>/dev/null | grep -qi "nerd"; then
-            CC_HAS_NERD_FONTS="1"
-            return 0
-        fi
-    fi
-
-    CC_HAS_NERD_FONTS="0"
-    return 1
-}
-
-# Get editor icon based on Nerd Font availability
-# ARGS: editor_name - "vim", "vscode", "cursor", "windsurf", "zed", "antigravity"
-# RETURNS: Nerd Font icon if available, empty string otherwise
-#
-# NOTE: Uses \xNN hex escapes for bash 3.x compatibility (macOS default)
-# The \uXXXX syntax requires bash 4.2+
-cc_get_editor_icon() {
-    local editor="$1"
-
-    if ! cc_has_nerd_fonts; then
-        echo ""
-        return
-    fi
-
-    # UTF-8 hex encoding for Nerd Font icons (bash 3.x compatible)
-    # U+E62B (Vim)    = \xee\x98\xab
-    # U+E8DA (VSCode) = \xee\xa3\x9a
-    case "$editor" in
-    vim | vi)
-        printf '\xee\x98\xab' # Vim icon (U+E62B)
-        ;;
-    vscode | code)
-        printf '\xee\xa3\x9a' # VS Code icon (U+E8DA)
-        ;;
-    cursor)
-        printf '\xee\xa3\x9a' # Use VS Code icon as fallback
-        ;;
-    windsurf)
-        printf '\xee\xa3\x9a' # Use VS Code icon as fallback
-        ;;
-    zed)
-        printf '\xee\xa3\x9a' # Use VS Code icon as fallback
-        ;;
-    antigravity | agy)
-        printf '\xee\xa3\x9a' # Use VS Code icon as fallback
-        ;;
-    *)
-        echo ""
-        ;;
-    esac
-}
 
 # ============================================================================
 # SESSION ID
@@ -228,41 +160,6 @@ cc_get_session_id() {
 
     echo "$id"
     return 0
-}
-
-# ============================================================================
-# MENU PARSING
-# ============================================================================
-
-# Robust menu command extraction
-# WHY: Menu format uses TAB separator (invisible in display, clean UI)
-# ASSUMPTION: Command portion never contains TAB character
-# TESTED BY: tests/test_menu_parsing.bats::handle title with colons
-#
-# Usage: cmd=$(cc_parse_menu_command "$choice")
-cc_parse_menu_command() {
-    local choice="$1"
-
-    if [ -z "$choice" ]; then
-        cc_log_warn "Empty menu choice"
-        return 1
-    fi
-
-    # Extract everything after the tab
-    # Format: "Label text<TAB>command args"
-    local cmd
-    cmd=$(printf '%s' "$choice" | cut -d$'\t' -f2-)
-
-    # Trim leading/trailing whitespace
-    cmd=$(echo "$cmd" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-    if [ -z "$cmd" ]; then
-        cc_log_warn "Failed to extract command from: $choice"
-        return 1
-    fi
-
-    cc_log_debug "Extracted command: $cmd"
-    echo "$cmd"
 }
 
 # ============================================================================
@@ -545,21 +442,6 @@ cc_set_permissions_mode() {
     fi
 }
 
-# Get permissions flag for claude CLI
-# WHY: Centralize flag construction to avoid duplication
-# RETURNS: "--dangerously-skip-permissions" or empty string
-#
-# Usage: PERMISSIONS_FLAG=$(cc_get_permissions_flag)
-cc_get_permissions_flag() {
-    local mode=$(cc_get_permissions_mode)
-
-    if [ "$mode" = "enabled" ]; then
-        echo "--dangerously-skip-permissions"
-    else
-        echo ""
-    fi
-}
-
 # Get current model from config.json
 # WHY: Single source of truth for model preference
 # RETURNS: "opus", "sonnet", or "haiku"
@@ -599,21 +481,6 @@ cc_set_model() {
         cc_log_error "Failed to set model"
         return 1
     fi
-}
-
-# Get model flag for claude CLI
-# WHY: Centralize model selection based on model config
-# RETURNS: "--model opus", "--model haiku", or empty string (sonnet is default)
-#
-# Usage: MODEL_FLAG=$(cc_get_model_flag)
-cc_get_model_flag() {
-    local model=$(cc_get_model)
-
-    case "$model" in
-        opus)   echo "--model opus" ;;
-        haiku)  echo "--model haiku" ;;
-        *)      echo "" ;;  # sonnet is Claude CLI default
-    esac
 }
 
 # Valid menu filter values - single source of truth for bash
@@ -753,17 +620,3 @@ cc_cycle_context_turns() {
     echo "$new_turns"
 }
 
-# ============================================================================
-# CLAUDE CLI INVOCATION SITES
-# ============================================================================
-#
-# All Claude CLI invocations MUST use centralized flag getters:
-#   MODEL_FLAG=$(cc_get_model_flag)              # --model opus, --model haiku, or empty (sonnet)
-#   PERMISSIONS_FLAG=$(cc_get_permissions_flag)  # --dangerously-skip-permissions or empty
-#
-# CRITICAL: When calling Claude INSIDE tmux sessions or nested shells,
-#           call the getter functions IN THAT CONTEXT to get fresh values.
-#           Variables set outside the tmux session become stale.
-#
-# Audit: grep -n 'cc_get_model_flag\|cc_get_permissions_flag' bin/*
-#

@@ -22,10 +22,6 @@ source "$SCRIPT_DIR/../lib/cc-common.sh"
 source "$SCRIPT_DIR/../lib/validators.sh"
 source "$SCRIPT_DIR/../lib/prompt-builder.sh"
 
-# Detect cc-hall availability (binary in PATH = module API surface)
-_HAS_CC_HALL=false
-command -v cc-hall &>/dev/null && _HAS_CC_HALL=true
-
 MODE="$1" # "interactive" or "auto"
 SEED_ID="$2"
 PROMPT_FILE="$3"
@@ -55,14 +51,6 @@ fi
 REFLECTION_BIN="$SCRIPT_DIR"
 REFLECTION_BASE="${REFLECTION_BASE:-${HOME}/.claude/reflections}"
 REFLECTION_RESULTS="${REFLECTION_BASE}/results"
-
-# Get permissions flag
-PERMISSIONS_FLAG=$(cc_get_permissions_flag)
-cc_log_debug "Permissions flag: ${PERMISSIONS_FLAG:-<none>}"
-
-# Get model flag
-MODEL_FLAG=$(cc_get_model_flag)
-cc_log_debug "Model flag: ${MODEL_FLAG:-<default sonnet>}"
 
 # Ensure results directory exists
 mkdir -p "$REFLECTION_RESULTS"
@@ -131,38 +119,13 @@ $SEED_JSON
 \`\`\`
 PROMPT_EOF
 
-    if [ "$_HAS_CC_HALL" = true ]; then
-        cc-hall agent --mode interactive \
-            --system-prompt-file "$SYSTEM_PROMPT_FILE" \
-            --model "$(cc_get_model)" \
-            $([ "$(cc_get_permissions_mode)" = "enabled" ] && echo "--skip-permissions") \
-            --window-name "reflect:${SEED_ID:0:8}" \
-            --message "Begin investigation" \
-            --cleanup "$SYSTEM_PROMPT_FILE"
-    else
-        # Standalone path: original tmux logic
-        cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
-        if cc_in_tmux; then
-            cc_log_debug "Running in tmux environment"
-            if [ -n "${ORIGINAL_TMUX}" ] && cc_validate_tmux_session "$ORIGINAL_TMUX"; then
-                cc_log_debug "Using ORIGINAL_TMUX: $ORIGINAL_TMUX"
-                TMUX="$ORIGINAL_TMUX" tmux new-window -n "reflect:${SEED_ID:0:8}"
-                TMUX="$ORIGINAL_TMUX" tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
-                sleep 1
-                TMUX="$ORIGINAL_TMUX" tmux send-keys "Begin investigation"
-            else
-                cc_log_debug "Using current TMUX session"
-                tmux new-window -n "reflect:${SEED_ID:0:8}"
-                tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
-                sleep 1
-                tmux send-keys "Begin investigation"
-            fi
-        else
-            cc_log_error "Not in tmux environment - cannot spawn interactive window"
-            echo "Error: Interactive mode requires tmux" >&2
-            exit 1
-        fi
-    fi
+    cc-hall agent --mode interactive \
+        --system-prompt-file "$SYSTEM_PROMPT_FILE" \
+        --model "$(cc_get_model)" \
+        $([ "$(cc_get_permissions_mode)" = "enabled" ] && echo "--skip-permissions") \
+        --window-name "reflect:${SEED_ID:0:8}" \
+        --message "Begin investigation" \
+        --cleanup "$SYSTEM_PROMPT_FILE"
 
     echo "" >/dev/tty
     echo "✅ Interactive thought-agent launched in new tmux window" >/dev/tty
@@ -189,26 +152,13 @@ $SEED_JSON
 \`\`\`
 PROMPT_EOF
 
-    if [ "$_HAS_CC_HALL" = true ]; then
-        cc-hall agent --mode auto \
-            --system-prompt-file "$SYSTEM_PROMPT_FILE" \
-            --prompt "Begin investigation" \
-            --model "$(cc_get_model)" \
-            $([ "$(cc_get_permissions_mode)" = "enabled" ] && echo "--skip-permissions") \
-            --window-name "reflect:${SEED_ID:0:8}" \
-            --cleanup "$SYSTEM_PROMPT_FILE"
-    else
-        cc_cleanup_on_exit "$SYSTEM_PROMPT_FILE"
-        if cc_in_tmux; then
-            cc_log_debug "Spawning in current tmux session"
-            tmux new-window -n "reflect:${SEED_ID:0:8}"
-            tmux send-keys 'claude '"$MODEL_FLAG"' '"$PERMISSIONS_FLAG"' -p "Begin investigation" --append-system-prompt "$(cat '"$SYSTEM_PROMPT_FILE"')"' Enter
-        else
-            cc_log_error "Not in tmux environment - auto mode requires tmux"
-            echo "Error: Auto mode requires tmux for tool access and visibility" >&2
-            exit 1
-        fi
-    fi
+    cc-hall agent --mode auto \
+        --system-prompt-file "$SYSTEM_PROMPT_FILE" \
+        --prompt "Begin investigation" \
+        --model "$(cc_get_model)" \
+        $([ "$(cc_get_permissions_mode)" = "enabled" ] && echo "--skip-permissions") \
+        --window-name "reflect:${SEED_ID:0:8}" \
+        --cleanup "$SYSTEM_PROMPT_FILE"
 
     echo "" >/dev/tty
     echo "✅ Auto thought-agent launched in new tmux window" >/dev/tty
@@ -219,6 +169,4 @@ PROMPT_EOF
     sleep 1
 fi
 
-# Script complete - both modes spawn tmux windows
-# Interactive: dual-branch (ORIGINAL_TMUX + current), prefilled input, manual Enter
-# Auto: single-branch (current TMUX only), uses -p flag to auto-execute
+# Script complete - both modes delegate to cc-hall agent

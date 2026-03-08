@@ -43,48 +43,30 @@ teardown() {
     rm -rf "$REFLECTION_BASE"
 }
 
-@test "Interactive mode uses --append-system-prompt (not -p)" {
-    # This test verifies the command structure, not actual execution
-
-    # Read the expand script
+@test "Interactive mode delegates to cc-hall agent --mode interactive" {
     EXPAND_SCRIPT="${BATS_TEST_DIRNAME}/../../bin/cc-reflect-expand"
 
-    # Verify interactive mode doesn't use -p flag
-    run grep -A 5 'if \[ "$MODE" = "interactive" \]' "$EXPAND_SCRIPT"
-    assert_success
-
-    # Should use --append-system-prompt (with optional model and permissions flags)
-    run grep 'claude.*--append-system-prompt' "$EXPAND_SCRIPT"
-    assert_success
-
-    # Interactive section should NOT contain -p
-    run bash -c "sed -n '/if \[ \"\$MODE\" = \"interactive\" \]/,/else/p' '$EXPAND_SCRIPT' | grep -q 'claude -p'"
-    assert_failure
-}
-
-@test "Auto mode uses tmux with -p flag and --append-system-prompt" {
-    # Read the expand script
-    EXPAND_SCRIPT="${BATS_TEST_DIRNAME}/../../bin/cc-reflect-expand"
-
-    # Auto mode should use --append-system-prompt like interactive
-    run bash -c "sed -n '/# Auto mode/,/^fi$/p' '$EXPAND_SCRIPT' | grep -q 'append-system-prompt'"
-    assert_success
-
-    # Should use -p flag to auto-execute
-    run bash -c "sed -n '/# Auto mode/,/^fi$/p' '$EXPAND_SCRIPT' | grep -q 'claude.*-p'"
+    # Interactive mode should use cc-hall agent with --mode interactive
+    run bash -c "sed -n '/if \[ \"\$MODE\" = \"interactive\" \]/,/^else$/p' '$EXPAND_SCRIPT' | grep -q 'cc-hall agent --mode interactive'"
     assert_success
 }
 
-@test "Both modes spawn tmux windows for visibility" {
+@test "Auto mode delegates to cc-hall agent --mode auto" {
     EXPAND_SCRIPT="${BATS_TEST_DIRNAME}/../../bin/cc-reflect-expand"
 
-    # Interactive mode should spawn tmux window
-    run bash -c "sed -n '/if \[ \"\$MODE\" = \"interactive\" \]/,/^else$/p' '$EXPAND_SCRIPT' | grep -q 'tmux new-window'"
+    # Auto mode should use cc-hall agent with --mode auto
+    run bash -c "sed -n '/# Auto mode/,/^fi$/p' '$EXPAND_SCRIPT' | grep -q 'cc-hall agent --mode auto'"
     assert_success
+}
 
-    # Auto mode should also spawn tmux window
-    run bash -c "sed -n '/# Auto mode/,/^fi$/p' '$EXPAND_SCRIPT' | grep -q 'tmux new-window'"
+@test "Both modes pass system prompt file to cc-hall agent" {
+    EXPAND_SCRIPT="${BATS_TEST_DIRNAME}/../../bin/cc-reflect-expand"
+
+    # Both modes should pass --system-prompt-file
+    run grep -c '\-\-system-prompt-file' "$EXPAND_SCRIPT"
     assert_success
+    count=$(echo "$output" | tr -d '[:space:]')
+    [ "$count" -ge 2 ]
 }
 
 @test "Ctrl-G flow writes to prompt file" {

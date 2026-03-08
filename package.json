@@ -1,6 +1,6 @@
 {
   "name": "cc-reflection",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Meta-cognitive self-reflection system for Claude Code",
   "type": "module",
   "scripts": {
@@ -17,7 +17,6 @@
     "test:env": "bats tests/unit/test_env_vars.bats"
   },
   "bin": {
-    "cc-reflect": "./bin/cc-reflect",
     "cc-reflect-expand": "./bin/cc-reflect-expand"
   },
   "dependencies": {},

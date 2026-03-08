@@ -340,8 +340,9 @@ teardown() {
 @test "bash and TypeScript both prefer CC_REFLECTION_SESSION_ID over file lookup" {
     # Set the env var (simulates what SessionStart hook writes to CLAUDE_ENV_FILE)
     export CC_REFLECTION_SESSION_ID="env-uuid-1234-5678-abcd"
-    # Clear CLAUDE_SESSION_ID so it doesn't take priority in cc_get_session_id
+    # Clear higher-priority vars so they don't take priority
     unset CLAUDE_SESSION_ID
+    unset CC_DICE_SESSION_ID
 
     # Bash side
     local bash_result
@@ -357,6 +358,7 @@ teardown() {
 @test "bash and TypeScript agree on session ID when CC_REFLECTION_SESSION_ID is set" {
     export CC_REFLECTION_SESSION_ID="contract-test-uuid-9999"
     unset CLAUDE_SESSION_ID
+    unset CC_DICE_SESSION_ID
 
     local bash_session
     bash_session=$(cc_get_session_id)
@@ -371,6 +373,7 @@ teardown() {
 @test "CC_REFLECTION_SESSION_ID unset falls through to file/project-hash" {
     unset CC_REFLECTION_SESSION_ID
     unset CLAUDE_SESSION_ID
+    unset CC_DICE_SESSION_ID
 
     # Both should fall through to project hash (no session file exists in test env)
     local bash_session

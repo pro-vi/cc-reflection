@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # reflection module for cc-hall
-# Surfaces reflection seeds, enhance prompt, settings, and actions
+# Surfaces reflection seeds, settings, and actions
 
 # Resolve to cc-reflection root (module dir may be symlinked from ~/.claude/hall/modules/reflection/)
 _MODULE_PATH="${BASH_SOURCE[0]}"
@@ -16,6 +16,7 @@ source "${HALL_LIB_DIR}/hall-theme.sh"
 # Metadata
 HALL_MODULE_LABEL="Reflection"
 HALL_MODULE_ORDER=30
+HALL_MODULE_ICON="◇"
 
 # Module-contributed keybindings for fzf
 # These are collected by hall and added to the fzf invocation
@@ -63,17 +64,57 @@ hall_reflection_entries() {
     local permissions="disabled"
     [ "$_REFLECT_SKIP_PERMS" = "true" ] && permissions="enabled"
 
+    # ── Guide ──────────────────────────────────────────────────
+
+    printf '%s\t%s\n' \
+        "$(hall_icon guide) $(hall_ansi_bold "Guide")" \
+        "rf-info guide"
+
     # ── Seed entries (single bun call via list-menu-entries) ──────
+
+    local _rf_group_open=false
+    local _rf_dim_pipe
+    _rf_dim_pipe=$(hall_ansi_dim "│")
+
+    _rf_subheader() {
+        if $_rf_group_open; then
+            printf '%s\t%s\n' "$(hall_ansi_dim "╰─")" "rf-noop"
+        fi
+        printf '%s\t%s\n' "$(hall_ansi_dim "╭─ $1 ──")" "rf-noop"
+        _rf_group_open=true
+    }
+
+    local _rf_seeds=""
     if command -v bun &>/dev/null; then
-        cc_bun_run "$REFLECTION_ROOT/lib/reflection-state.ts" list-menu-entries "$filter" "$mode" 2>/dev/null || true
+        _rf_seeds=$(cc_bun_run "$REFLECTION_ROOT/lib/reflection-state.ts" list-menu-entries "$filter" "$mode" 2>/dev/null || true)
+    fi
+
+    local _rf_seed_count=0
+    [ -n "$_rf_seeds" ] && _rf_seed_count=$(echo "$_rf_seeds" | wc -l | tr -d ' ')
+
+    _rf_subheader "Seeds $(hall_ansi_dim "($filter · $_rf_seed_count)")"
+
+    if [ -n "$_rf_seeds" ]; then
+        # Prepend │ to each seed entry
+        while IFS=$'\t' read -r _rf_label _rf_cmd; do
+            printf '%s\t%s\n' "$_rf_dim_pipe $_rf_label" "$_rf_cmd"
+        done <<< "$_rf_seeds"
+    else
+        printf '%s\t%s\n' \
+            "$_rf_dim_pipe $(hall_ansi_dim "(no seeds)")" \
+            "rf-noop"
     fi
 
     # ── Settings ──────────────────────────────────────────────
-    hall_section_header "Settings"
+
+    _rf_subheader "Settings"
+
     # Mode
-    local opposite_mode
+    local display_mode opposite_mode
     [ "$mode" = "interactive" ] && display_mode="Interactive" && opposite_mode="Auto" || { display_mode="Auto"; opposite_mode="Interactive"; }
-    printf '%s\t%s\n' "🔄 Mode: $display_mode $(hall_ansi_dim "→ $opposite_mode")" "cc-reflect-toggle-mode"
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Mode"): $display_mode $(hall_ansi_dim "→ $opposite_mode")" \
+        "cc-reflect-toggle-mode"
 
     # Model
     local current_model next_model
@@ -83,7 +124,9 @@ hall_reflection_entries() {
         haiku)  current_model="Haiku";  next_model="Opus"   ;;
         *)      current_model="Opus";   next_model="Sonnet" ;;
     esac
-    printf '%s\t%s\n' "🤖 Model: $current_model $(hall_ansi_dim "→ $next_model")" "cc-reflect-toggle-model"
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Model"): $current_model $(hall_ansi_dim "→ $next_model")" \
+        "cc-reflect-toggle-model"
 
     # Filter
     local filter_display next_filter
@@ -94,25 +137,50 @@ hall_reflection_entries() {
         all)      filter_display="All";      next_filter="Active"   ;;
         *)        filter_display="Active";   next_filter="Outdated" ;;
     esac
-    printf '%s\t%s\n' "🔍 Filter: $filter_display $(hall_ansi_dim "→ $next_filter")" "cc-reflect-toggle-filter"
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Filter"): $filter_display $(hall_ansi_dim "→ $next_filter")" \
+        "cc-reflect-toggle-filter"
 
     # Context turns
-    local context_display
+    local context_display next_context
     case "$context_turns" in
-        0)  context_display="Off"       ;;
-        3)  context_display="3 turns"   ;;
-        5)  context_display="5 turns"   ;;
-        10) context_display="10 turns"  ;;
-        *)  context_display="$context_turns" ;;
+        0)  context_display="Off";      next_context="3"   ;;
+        3)  context_display="3 turns";  next_context="5"   ;;
+        5)  context_display="5 turns";  next_context="10"  ;;
+        10) context_display="10 turns"; next_context="Off" ;;
+        *)  context_display="$context_turns"; next_context="3" ;;
     esac
-    printf '%s\t%s\n' "💬 Context: $context_display" "cc-reflect-toggle-context"
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Context"): $context_display $(hall_ansi_dim "→ $next_context")" \
+        "cc-reflect-toggle-context"
 
     # Permissions
-    local perm_status
-    [ "$permissions" = "enabled" ] && perm_status="On" || perm_status="Off"
-    printf '%s\t%s\n' "🔓 Skip perms: $perm_status" "cc-reflect-toggle-permissions"
+    local perm_display next_perm
+    if [ "$permissions" = "enabled" ]; then
+        perm_display="On"; next_perm="Off"
+    else
+        perm_display="Off"; next_perm="On"
+    fi
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Skip Perms"): $perm_display $(hall_ansi_dim "→ $next_perm")" \
+        "cc-reflect-toggle-permissions"
 
     # ── Actions ──────────────────────────────────────────────
-    hall_section_header "Actions"
-    printf '%s\t%s\n' "📦 Archive Outdated Seeds" "cc-reflect-archive-outdated"
+
+    _rf_subheader "Actions"
+
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Archive Outdated")" \
+        "cc-reflect-archive-outdated"
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Archive All")" \
+        "cc-reflect-archive-all"
+    printf '%s\t%s\n' \
+        "$(hall_ansi_dim "│") $(hall_ansi_bold "Purge Archived")" \
+        "cc-reflect-purge-archived"
+
+    # Close final group
+    if $_rf_group_open; then
+        printf '%s\t%s\n' "$(hall_ansi_dim "╰─")" "rf-noop"
+    fi
 }

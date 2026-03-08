@@ -8,13 +8,7 @@ The agent reflects. But when *you* engage, that's when the system comes alive.
 
 ## Install
 
-Requires [bun](https://bun.sh), [git](https://git-scm.com), [fzf](https://github.com/junegunn/fzf), [tmux](https://github.com/tmux/tmux), and [jq](https://jqlang.github.io/jq/).
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/pro-vi/cc-reflection/main/install.sh | bash
-```
-
-Or clone locally:
+Requires [cc-hall](https://github.com/pro-vi/cc-hall) (unified menu system), [bun](https://bun.sh), [git](https://git-scm.com), [fzf](https://github.com/junegunn/fzf), [tmux](https://github.com/tmux/tmux), and [jq](https://jqlang.github.io/jq/).
 
 ```bash
 git clone https://github.com/pro-vi/cc-reflection.git
@@ -24,7 +18,7 @@ cd cc-reflection && ./install.sh
 Recommended: install [cc-dice](https://github.com/pro-vi/cc-dice) for agent-side proactive reflection (see [How it works](#how-it-works)).
 
 ```bash
-cc-reflect --check     # verify installation
+./install.sh check     # verify installation
 ./install.sh uninstall # remove
 ```
 
@@ -34,7 +28,7 @@ cc-reflect --check     # verify installation
 
 1. **Agent-side** (`/reflection` skill + [cc-dice](https://github.com/pro-vi/cc-dice)): The `/reflection` skill is available in every session, but agents rarely reflect unprompted. [cc-dice](https://github.com/pro-vi/cc-dice) solves this. It accumulates dice across turns and eventually prompts the agent to check if anything is worth reflecting on. The longer the session, the higher the pressure.
 
-2. **Your side** (Ctrl+G): `cc-reflect` is your EDITOR. Press Ctrl+G in Claude Code to open the fzf menu: browse seeds, expand them, or edit your prompt. Expanding a seed spawns a thought agent that reads relevant code and writes a plan for the artifact the seed proposed. In interactive mode you can steer the expansion. The result lands in your input box as a ready-to-send prompt.
+2. **Your side** (Ctrl+G): [cc-hall](https://github.com/pro-vi/cc-hall) is your EDITOR. Press Ctrl+G in Claude Code to open the unified menu, then switch to the Reflection tab. Browse seeds, expand them, or edit your prompt. Expanding a seed spawns a thought agent (via `cc-hall agent`) that reads relevant code and writes a plan for the artifact the seed proposed. In interactive mode you can steer the expansion. The result lands in your input box as a ready-to-send prompt.
 
 Seeds persist across conversations in the same project.
 
@@ -48,23 +42,31 @@ Seeds persist across conversations in the same project.
 
 ## Ctrl+G
 
-When you press Ctrl+G, `cc-reflect` opens an fzf menu inside tmux. What you can do:
+When you press Ctrl+G, cc-hall opens an fzf menu inside tmux. Switch to the **Reflection** tab to access seeds and settings.
 
-**Edit prompt**: Open your current prompt in your editor (auto detects your editors). Save and close to send it back to Claude.
+**Edit prompt**: Open your current prompt in your editor (cc-hall auto-detects installed editors). Save and close to send it back to Claude.
 
 **Enhance prompt**: A separate agent enhances your draft for clarity and adds acceptance criteria. Runs in interactive or auto mode depending on your settings.
 
 **Expand seeds**: Seeds appear with freshness indicators (🌱 fresh, 💭 growing, 💤 stale, 📦 archived). Toggle the preview pane with `Ctrl+/` to see rationale. Select a seed to spawn a thought agent that investigates the concern and produces an actionable prompt: a plan for the artifact the seed proposed. The thought agent has hardened system prompts with mandatory verification gates: it must check every file path it references actually exists, won't speculate about code it hasn't read, and records a conclusion that gets attached to the seed for future reference. In interactive mode you can steer the direction before it finalizes. When done, `Ctrl+C` to end the thought agent, then `Ctrl+D` to detach from tmux. The result goes straight into your input box, ready to send.
 
-**Settings**:
+**Settings** (in the Settings group):
 
-| Setting | Toggle | Options |
-|---------|--------|---------|
-| Expansion mode | `🔄 Mode` | interactive / auto |
-| Model | `🤖 Model` | opus / sonnet / haiku |
-| Filter | `🔍 Filter` | active / outdated / archived / all |
-| Context turns | `💬 Context` | 0 / 3 / 5 / 10 |
-| Permissions | `🔐 Permissions` | skip / require |
+| Setting | Options |
+|---------|---------|
+| **Mode** | interactive / auto |
+| **Model** | opus / sonnet / haiku |
+| **Filter** | active / outdated / archived / all |
+| **Context** | 0 / 3 / 5 / 10 turns |
+| **Skip Perms** | on / off |
+
+**Actions** (in the Actions group):
+
+| Action | Description |
+|--------|-------------|
+| **Archive Outdated** | Archive seeds older than 3 days |
+| **Archive All** | Archive every active seed |
+| **Purge Archived** | Permanently delete archived seeds |
 
 **Keybindings:**
 
@@ -100,8 +102,8 @@ Seeds are never auto-deleted. They go stale after `ttl_hours` and can be archive
 |-----------|----------|------|
 | Skill | `.claude/skills/reflection/SKILL.md` | Teaches Claude when/how to create seeds |
 | State manager | `lib/reflection-state.ts` | Seed lifecycle: write, read, expire, dedupe |
-| EDITOR binary | `bin/cc-reflect` | Ctrl+G opens fzf menu via Claude Code's EDITOR hook |
-| Thought agent | `bin/cc-reflect-expand` | Spawns Claude instance to expand seeds |
+| Hall module | `hall-module/` | Surfaces seeds, settings, and actions in cc-hall's menu |
+| Thought agent | `bin/cc-reflect-expand` | Spawns thought agent via `cc-hall agent` to expand seeds |
 | SessionStart hook | `bin/reflection-session-start.ts` | Registers session UUID for cross-conversation persistence |
 | Dice | [cc-dice](https://github.com/pro-vi/cc-dice) (recommended) | Accumulating pressure model that prompts agent to reflect |
 
@@ -158,7 +160,7 @@ bun lib/reflection-state.ts set-permissions <enabled|disabled>
 <summary>Security</summary>
 
 - Seed titles reject shell metacharacters; IDs validated with strict regex
-- Only allowlisted commands executable from menu
+- Commands routed through cc-hall's module dispatch (on_select.sh)
 - JSON validated on load; malformed seeds skipped
 - Single-user, local-only deployment assumed
 - See [`SECURITY.md`](./SECURITY.md) and `tests/security/test_shell_injection.bats`

@@ -263,28 +263,3 @@ EOF
     assert_output --partial "Decision point: secure authentication pattern"
 }
 
-# ============================================================================
-# MENU PARSING TESTS
-# ============================================================================
-
-@test "menu parsing: pipe in title doesn't break parsing" {
-    source "$SCRIPT_DIR/lib/cc-common.sh"
-
-    # With TAB delimiter, pipes in label are perfectly fine
-    menu_entry=$(printf '%s\t%s' "[REFLECT] Title with|pipe (Interactive)" "cc-reflect-expand interactive seed-123")
-
-    run cc_parse_menu_command "$menu_entry"
-    assert_success
-    assert_output "cc-reflect-expand interactive seed-123"
-}
-
-@test "menu parsing: extracts command after last pipe" {
-    source "$SCRIPT_DIR/lib/cc-common.sh"
-
-    # TAB delimiter handles colons and pipes in labels
-    menu_entry=$(printf '%s\t%s' "Label: with: colons" "actual-command seed-456")
-
-    run cc_parse_menu_command "$menu_entry"
-    assert_success
-    assert_output "actual-command seed-456"
-}

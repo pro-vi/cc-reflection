@@ -85,6 +85,10 @@ check_dependencies() {
         missing+=("claude (Claude Code CLI)")
     fi
 
+    if ! command -v cc-hall &> /dev/null; then
+        missing+=("cc-hall (unified menu system)")
+    fi
+
     if [ ${#missing[@]} -gt 0 ]; then
         print_error "Missing dependencies:"
         for dep in "${missing[@]}"; do
@@ -114,19 +118,15 @@ install_global() {
     mkdir -p "$REFLECTION_BASE"/{seeds,results}
 
     # Symlink executables
-    ln -sf "$SCRIPT_DIR/bin/cc-reflect" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-expand" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-toggle-mode" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-toggle-permissions" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-toggle-haiku" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-toggle-filter" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-toggle-context" "$INSTALL_DIR/"
-    ln -sf "$SCRIPT_DIR/bin/cc-reflect-rebuild-menu" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-preview-seed" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-delete-seed" "$INSTALL_DIR/"
     ln -sf "$SCRIPT_DIR/bin/cc-reflect-archive-seed" "$INSTALL_DIR/"
-    ln -sf "$SCRIPT_DIR/bin/cc-reflect-build-menu" "$INSTALL_DIR/"
-    ln -sf "$SCRIPT_DIR/bin/cc-reflect-header" "$INSTALL_DIR/"
     print_success "Installed binaries to $INSTALL_DIR"
 
     # Symlink reflection scripts (so git pull auto-updates)
@@ -402,56 +402,6 @@ register_reflection_slot() {
     fi
 }
 
-configure_editor() {
-    print_info "Configuring EDITOR environment variable..."
-
-    local shell_config=""
-    # Detect user's shell from $SHELL environment variable
-    # (Can't use $BASH_VERSION/$ZSH_VERSION since this script runs in bash)
-    case "$SHELL" in
-        */zsh)
-            shell_config="$HOME/.zshrc"
-            ;;
-        */bash)
-            shell_config="$HOME/.bashrc"
-            ;;
-        */fish)
-            shell_config="$HOME/.config/fish/config.fish"
-            ;;
-        *)
-            shell_config="$HOME/.profile"
-            ;;
-    esac
-
-    if [[ "$SHELL" == */fish ]]; then
-        local editor_line='set -gx EDITOR cc-reflect'
-    else
-        local editor_line='export EDITOR="cc-reflect"'
-    fi
-
-    if grep -q "cc-reflect" "$shell_config" 2>/dev/null; then
-        print_success "EDITOR already configured in $shell_config"
-    elif [ -t 0 ]; then
-        echo ""
-        print_warning "This will set EDITOR=cc-reflect in $shell_config"
-        print_warning "This affects all programs that use \$EDITOR (git commit, crontab -e, etc.)"
-        read -p "Proceed? [y/N] " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo "" >> "$shell_config"
-            echo "# CC-Reflection: Set cc-reflect as editor for Claude Code" >> "$shell_config"
-            echo "$editor_line" >> "$shell_config"
-            print_success "Added EDITOR configuration to $shell_config"
-            print_warning "Run: source $shell_config"
-        else
-            print_info "Skipped EDITOR configuration"
-        fi
-    else
-        print_info "Set EDITOR manually in $shell_config:"
-        echo "  $editor_line"
-    fi
-}
-
 show_usage() {
     echo "Usage: ./install.sh [command]"
     echo ""
@@ -476,14 +426,18 @@ show_check() {
     local errors=0
     local warnings=0
 
-    # Check binaries
-    echo "Binaries (~/.local/bin/):"
-    if [ -L "$INSTALL_DIR/cc-reflect" ]; then
-        echo -e "  ${GREEN}✓${NC} cc-reflect"
+    # Check cc-hall dependency
+    echo "Dependencies:"
+    if command -v cc-hall &>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} cc-hall"
     else
-        echo -e "  ${RED}✗${NC} cc-reflect (not installed)"
+        echo -e "  ${RED}✗${NC} cc-hall (required, not found)"
         errors=$((errors + 1))
     fi
+
+    # Check binaries
+    echo ""
+    echo "Binaries (~/.local/bin/):"
     if [ -L "$INSTALL_DIR/cc-reflect-expand" ]; then
         echo -e "  ${GREEN}✓${NC} cc-reflect-expand"
     else
@@ -492,8 +446,8 @@ show_check() {
     fi
 
     # Version mismatch detection
-    if [ -L "$INSTALL_DIR/cc-reflect" ]; then
-        local installed_target=$(readlink "$INSTALL_DIR/cc-reflect" 2>/dev/null)
+    if [ -L "$INSTALL_DIR/cc-reflect-expand" ]; then
+        local installed_target=$(readlink "$INSTALL_DIR/cc-reflect-expand" 2>/dev/null)
         if [ -n "$installed_target" ] && [ ! -f "$installed_target" ]; then
             echo -e "  ${RED}✗${NC} Symlink broken (target missing)"
             errors=$((errors + 1))
@@ -563,15 +517,8 @@ show_check() {
         echo -e "  ${YELLOW}⚠${NC} Directory not created yet"
     fi
 
-    # Check EDITOR
     echo ""
     echo "Environment:"
-    if [ "$EDITOR" = "cc-reflect" ] || [[ "$EDITOR" == *"cc-reflect"* ]]; then
-        echo -e "  ${GREEN}✓${NC} EDITOR=$EDITOR"
-    else
-        echo -e "  ${YELLOW}⚠${NC} EDITOR=${EDITOR:-not set} (should be cc-reflect)"
-        warnings=$((warnings + 1))
-    fi
 
     # Check PATH
     if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
@@ -597,7 +544,7 @@ show_check() {
 uninstall() {
     print_info "Uninstalling cc-reflection..."
 
-    # Remove binaries
+    # Remove binaries (includes legacy names for clean upgrade)
     rm -f "$INSTALL_DIR/cc-reflect"
     rm -f "$INSTALL_DIR/cc-reflect-expand"
     rm -f "$INSTALL_DIR/cc-reflect-toggle-mode"
@@ -707,13 +654,12 @@ case "${1:-}" in
         resolve_source_dir
         install_global
         register_reflection_slot
-        configure_editor
         echo ""
         print_success "Installation complete!"
         echo ""
         print_info "Next steps:"
         echo "  1. Reload shell: source ~/.bashrc (or ~/.zshrc)"
-        echo "  2. Verify: cc-reflect --check"
+        echo "  2. Verify: ./install.sh check"
         echo "  3. Start Claude Code: claude"
         echo ""
         ;;
